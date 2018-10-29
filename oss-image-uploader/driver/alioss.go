@@ -19,4 +19,8 @@ func AliOssClient(endpoint string, accessId string, accessKey string) aliOssClie
     return aliOssClient{endpoint, accessId, accessKey, client}
 }
 
+func (c aliOssClient) ListBuckets() (oss.ListBucketsResult, error) {
+    return c.client.ListBuckets()
+}
+
 

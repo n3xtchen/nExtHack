@@ -4,8 +4,7 @@ import (
     "fmt"
     "os"
     // "regexp"
-    driver "./driver/alioss"
-    // "github.com/aliyun/aliyun-oss-go-sdk/oss"
+    "nExtHack/oss-image-uploader/driver"
     "github.com/go-ini/ini"
 )
 
@@ -29,7 +28,7 @@ func main() {
     // }
     var client = driver.AliOssClient(endpoint, access_id, access_key)
 
-    lsRes, err := client.client.ListBuckets()
+    lsRes, err := client.ListBuckets()
     if err != nil {
         // HandleError(err)
     }
