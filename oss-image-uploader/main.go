@@ -1,39 +1,38 @@
 package main
 
 import (
+    "flag"
     "fmt"
     "os"
-    // "regexp"
-    "nExtHack/oss-image-uploader/driver"
-    "github.com/go-ini/ini"
+    // "nExtHack/oss-image-uploader/driver"
+    // "github.com/go-ini/ini"
 )
 
 func main() {
 
-    cfg, err := ini.Load("product.ini")
-    if err != nil {
-        fmt.Printf("Fail to read file: %v", err)
+    fileName := flag.String("file-name", "", "a markdown file")
+
+    // 参数解析
+    flag.Parse()
+
+    if *fileName == "" {
+        fmt.Printf("Fail to read file: ")
         os.Exit(1)
     }
 
-    var (
-        endpoint = cfg.Section("oss").Key("endpoint").String()
-        access_id = cfg.Section("oss").Key("access_id").String()
-        access_key = cfg.Section("oss").Key("access_key").String()
-    )
+    fmt.Printf("%s is processing...", *fileName)
 
-    // client, err := oss.New(endpoint, access_id, access_key)
+    // cfg, err := ini.Load("product.ini")
     // if err != nil {
-    //     // HandleError(err)
+    //     fmt.Printf("Fail to read conf file: %v", err)
+    //     os.Exit(1)
     // }
-    var client = driver.AliOssClient(endpoint, access_id, access_key)
 
-    lsRes, err := client.ListBuckets()
-    if err != nil {
-        // HandleError(err)
-    }
+    // var (
+    //     endpoint = cfg.Section("oss").Key("endpoint").String()
+    //     access_id = cfg.Section("oss").Key("access_id").String()
+    //     access_key = cfg.Section("oss").Key("access_key").String()
+    // )
 
-    for _, bucket := range lsRes.Buckets {
-        fmt.Println("Buckets:", bucket.Name)
-    }
+    // var client = driver.AliOssClient(endpoint, access_id, access_key)
 }
