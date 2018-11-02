@@ -8,19 +8,34 @@ type aliOssClient struct {
     endpoint string
     accessId string
     accessKey string
+    bucketName string
     client  *oss.Client
+    bucket  *oss.Bucket
 }
 
-func AliOssClient(endpoint string, accessId string, accessKey string) aliOssClient {
+func AliOssClient(endpoint string, accessId string, accessKey string, bucketName string) aliOssClient {
     client, err := oss.New(endpoint, accessId, accessKey)
     if err != nil {
         // HandleError(err)
     }
-    return aliOssClient{endpoint, accessId, accessKey, client}
+
+    bucket, err := client.Bucket(bucketName)
+    if err != nil {
+        // HandleError(err)
+    }
+
+    return aliOssClient{endpoint, accessId, accessKey, bucketName, client, bucket}
 }
 
 func (c aliOssClient) ListBuckets() (oss.ListBucketsResult, error) {
     return c.client.ListBuckets()
+}
+
+func (c aliOssClient) Put(objName string, localFile string) {
+    err := c.bucket.PutObjectFromFile(objName, localFile)
+    if err != nil {
+        // HandleError(err)
+    }
 }
 
 
