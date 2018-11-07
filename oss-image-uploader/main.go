@@ -77,7 +77,13 @@ func main() {
 
     var client = driver.AliOssClient(endpoint, access_id, access_key, bucket_name)
 
-    client.ListBuckets()
+    files, err := ioutil.ReadDir("./img")
+    if err != nil {
+        log.Fatal(err)
+    }
 
+    for _, f := range files {
+        client.Put("test/"+f.Name(), "./img/"+f.Name())
+    }
 
 }
