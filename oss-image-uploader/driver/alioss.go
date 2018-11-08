@@ -21,6 +21,7 @@ func AliOssClient(endpoint string, accessId string, accessKey string, bucketName
 
     bucket, err := client.Bucket(bucketName)
     if err != nil {
+        bucket = nil
         // HandleError(err)
     }
 

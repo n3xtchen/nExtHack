@@ -70,12 +70,12 @@ func main() {
 
     var (
         endpoint = cfg.Section("oss").Key("endpoint").String()
-        access_id = cfg.Section("oss").Key("access_id").String()
-        access_key = cfg.Section("oss").Key("access_key").String()
-        bucket_name = cfg.Section("oss").Key("bucket_name").String()
+        accessId = cfg.Section("oss").Key("access_id").String()
+        accessKey = cfg.Section("oss").Key("access_key").String()
+        bucketName = cfg.Section("oss").Key("bucket_name").String()
     )
 
-    var client = driver.AliOssClient(endpoint, access_id, access_key, bucket_name)
+    var client = driver.AliOssClient(endpoint, accessId, accessKey, bucketName)
 
     files, err := ioutil.ReadDir("./img")
     if err != nil {
