@@ -2,7 +2,6 @@ package main
 
 import (
     "flag"
-    "fmt"
     "log"
     "io/ioutil"
     "os"
@@ -30,7 +29,7 @@ func main() {
         os.Exit(1)
     }
 
-    fmt.Printf("%s is processing...", *fileName)
+    log.Printf("%s is processing...", *fileName)
     urls := xurls.Strict().FindAllString(string(bytes), -1)
 
     for _, url := range urls {
@@ -39,7 +38,7 @@ func main() {
 
     cfg, err := ini.Load("product.ini")
     if err != nil {
-        fmt.Printf("Fail to read conf file: %v", err)
+        log.Printf("Fail to read conf file: %v", err)
         os.Exit(1)
     }
 
