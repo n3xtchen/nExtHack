@@ -1,5 +1,0 @@
----
-- hosts: anygroup
-  roles:
-    - common
-    - anyrole
