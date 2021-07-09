@@ -1,0 +1,31 @@
+all:
+  hosts:
+    localhost:
+      ansible_user: nextchen
+    node1:
+      ansible_user: ubuntu
+      ansible_host: 10.0.0.4
+      ip: 10.0.0.4
+      access_ip: 10.0.0.4
+    node2:
+      ansible_user: ubuntu
+      ansible_host: 10.0.0.5
+      ip: 10.0.0.5
+      access_ip: 10.0.0.5
+    node3:
+      ansible_user: ubuntu
+      ansible_host: 10.0.0.6
+      ip: 10.0.0.6
+      access_ip: 10.0.0.6
+  children:
+    next_k3s:
+      hosts:
+        node1:
+        node2:
+        node3:
+    docker_registry:
+      hosts:
+        node3:
+    test:
+      hosts:
+        localhost:
