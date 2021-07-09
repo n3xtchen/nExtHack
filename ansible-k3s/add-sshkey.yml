@@ -1,0 +1,11 @@
+---
+- hosts: next_k3s
+  gather_facts: false
+  tasks:
+  - name: install ssh key
+    authorized_key:
+      user: ubuntu
+      key: "{{ lookup('file', '~/.ssh/id_rsa.pub') }}"
+      state: present
+
+# ansible-playbook -i inventory.yaml --ask-pass add-sshkey.yml
