@@ -26,6 +26,9 @@ all:
     docker_registry:
       hosts:
         node3:
+    etcd:
+      hosts:
+        node3:
     test:
       hosts:
         localhost:
