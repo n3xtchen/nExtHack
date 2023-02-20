@@ -51,7 +51,8 @@ func GetToken(appID string, appSecret string) {
     authUrl := fmt.Sprintf(
         "%s/token?grant_type=client_credential&appid=%s&secret=%s",
         WECHAT_API, appID, appSecret)
-    resp, err := http.Get(authUrl)
+    resp, errors := http.Get(authUrl)
+    fmt.Println(errors)
     defer resp.Body.Close()
     fmt.Println(RespParse[WechatErr](resp.Body))
 }
