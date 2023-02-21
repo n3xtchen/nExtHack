@@ -10,7 +10,7 @@ tool:
 	gofmt -w .
 
 lint:
-	golint ./...
+	golangci-lint run ./...
 
 clean:
 	go clean -i .

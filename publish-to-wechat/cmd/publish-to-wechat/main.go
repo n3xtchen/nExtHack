@@ -42,7 +42,7 @@ func RespParse[T interface{}](resp io.Reader) T {
     fmt.Println(string(body))
 
     var response T
-    json.Unmarshal(body, &response)
+    log.Fatal(json.Unmarshal(body, &response))
 
     return response
 }
@@ -70,6 +70,5 @@ func main() {
         },
     }
 
-    // log.Fatal(rootCmd.Execute())
-    rootCmd.Execute()
+    log.Fatal(rootCmd.Execute())
 }
