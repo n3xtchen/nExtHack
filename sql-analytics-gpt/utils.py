@@ -34,34 +34,27 @@ def table_info(table_name):
         if (len(result)>0):
             data = pd.DataFrame(result)
             data = data.to_string(index=False)
-            sample_data = f"""
-{table.name} 的样本数据如下：
-{data}
-            """
+            sample_data = f"""{table.name} 的样本数据如下：
+{data}"""
 
     return f"""{table.name} 的表结构如下：
   {field_summary}    
+{sample_data}"""
 
-{sample_data}
-    """
-
-def build_prompt(question, related_tables):
+def build_prompt(question, related_tables, opt_tips="", check_tips=""):
     question = question.strip()
     tables_summary = "\n\n".join(table_info(t) for t in related_tables)
 
-    prompt = f"""{tables_summary}
+    set_role = """现在你是一个资深的分析师，有着丰富分析经验和SQL能力，请你帮个忙"""
 
-作为资深的分析师，根据以上提供的数据结构和数据，编写一个具体和准确的 {ENGINE.dialect.name} 的查询语句来回答如下分析问题：
+    prompt = f"""{set_role}
+{opt_tips}
+{tables_summary}
+
+根据以上提供的数据结构和数据，编写一个具体和准确的 {ENGINE.dialect.name} 的查询语句来回答如下分析问题：
 
 "{question}"
-
-并使用你的逻辑来注释它
-    """
+{check_tips}
+并使用你的逻辑来注释它。 """
     
     return prompt
-
-if __name__ == "__main__":
-
-    print(build_prompt("统计下客户数量", ["Customer"]))
-
-
