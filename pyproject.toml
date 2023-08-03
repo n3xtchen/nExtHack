@@ -1,0 +1,19 @@
+[tool.pyright]
+include = ["storage_inspect"]
+exclude = [
+  "**/__pycache__"
+]
+ignore = [
+]
+
+defineConstant = { DEBUG = true }
+venv = "develop"
+
+reportMissingImports = true
+
+pythonVersion = "3.11"
+pythonPlatform = "Darwin"
+
+executionEnvironments = [
+  { root = "storage_inspect" }
+]
