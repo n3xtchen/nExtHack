@@ -37,6 +37,12 @@ def get_dir_size(folder_path: str):
                 folder_size += os.path.getsize(file_path)
     return folder_size
 
+def format_with_ellipsis(text, max_length):
+    if len(text) <= max_length:
+        return text
+    else:
+        return text[:max_length - 3] + "..."
+
 def scan_large_files(folder_path: str, dir_pattern: List[str]=[], min_file_size: int=MIN_FILE_SIZE):
     """
     扫描大文件
@@ -57,10 +63,14 @@ def scan_large_files(folder_path: str, dir_pattern: List[str]=[], min_file_size:
                     file_size = os.path.getsize(file_path)
                     if file_size > min_file_size:
                         large_files.append((file_path, file_size))
+
     if large_files:
         print("大文件列表：")
+        row_format = "{:>50}{:>15}"
+        print(row_format.format("Path", "Size"))
+        large_files.sort(key=lambda x: x[1], reverse=True)
         for file_path, file_size in large_files:
-            print(f"{file_path}\t({sizeof_fmt(file_size)})")
+            print(row_format.format(format_with_ellipsis(file_path, 50), sizeof_fmt(file_size)))
     else:
         print("没有找到大文件。")
 

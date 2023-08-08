@@ -7,7 +7,7 @@ ignore = [
 ]
 
 defineConstant = { DEBUG = true }
-venv = "develop"
+venv = "nexthack"
 
 reportMissingImports = true
 
