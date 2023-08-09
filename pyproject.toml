@@ -15,5 +15,6 @@ pythonVersion = "3.11"
 pythonPlatform = "Darwin"
 
 executionEnvironments = [
-  { root = "storage_inspect" }
+  { root = "storage_inspect" },
+  { root = "homebrew-tools" }
 ]
