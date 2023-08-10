@@ -1,5 +1,5 @@
 [tool.pyright]
-include = ["storage_inspect"]
+include = ["storage_inspect", "homebrew-tools", "npjm"]
 exclude = [
   "**/__pycache__"
 ]
@@ -16,5 +16,6 @@ pythonPlatform = "Darwin"
 
 executionEnvironments = [
   { root = "storage_inspect" },
-  { root = "homebrew-tools" }
+  { root = "homebrew-tools" },
+  { root = "npjm" }
 ]
