@@ -1,3 +1,10 @@
+[tool.yapf]
+based_on_style = "pep8"
+indent_width = 4
+
+[tool.pytest.ini_options]
+addopts = "--capture=no"
+
 [tool.pyright]
 include = ["storage_inspect", "homebrew-tools", "npjm"]
 exclude = [
@@ -8,13 +15,23 @@ ignore = [
 
 defineConstant = { DEBUG = true }
 venv = "nexthack"
+stubPath = "stubs"
 
 reportMissingImports = true
+reportMissingTypeStubs = false
+reportIncompleteStub = true
+reportInvalidStubStatement = true
+
+reportGeneralTypeIssues = false
+
+# self 都识别不了
+reportUndefinedVariable = false
 
 pythonVersion = "3.11"
 pythonPlatform = "Darwin"
 
 executionEnvironments = [
+  { root = "tests", extraPaths = ["."] },
   { root = "storage_inspect" },
   { root = "homebrew-tools" },
   { root = "npjm" }
