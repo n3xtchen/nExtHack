@@ -48,7 +48,13 @@ pluggy==1.2.0
 pylint==2.17.5
     # via -r requirements-dev.in
 pytest==7.4.0
+    # via
+    #   -r requirements-dev.in
+    #   pytest-dotenv
+pytest-dotenv==0.5.2
     # via -r requirements-dev.in
+python-dotenv==1.0.0
+    # via pytest-dotenv
 requests==2.31.0
     # via -r requirements.txt
 tomli==2.0.1
