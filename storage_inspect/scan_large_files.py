@@ -4,7 +4,6 @@
 # Copyright © 2023 n3xtchen <echenwen@gmail.com>
 #
 # Distributed under terms of the GPL-2.0 license.
-
 """
 文件磁盘占用分析
 """
@@ -15,6 +14,7 @@ import typer
 
 MIN_FILE_SIZE = 1024 * 1024 * 10  # 设置最小文件大小为10MB，您可以根据需要调整大小
 
+
 def sizeof_fmt(num, suffix="B"):
     """
     可视化字节数
@@ -24,6 +24,7 @@ def sizeof_fmt(num, suffix="B"):
             return f"{num:3.1f}{unit}{suffix}"
         num /= 1024.0
     return f"{num:.1f}Yi{suffix}"
+
 
 def get_dir_size(folder_path: str):
     """
@@ -37,13 +38,19 @@ def get_dir_size(folder_path: str):
                 folder_size += os.path.getsize(file_path)
     return folder_size
 
+
 def format_with_ellipsis(text, max_length):
+    """
+    超过固定长度，使用省略号
+    """
     if len(text) <= max_length:
         return text
-    else:
-        return text[:max_length - 3] + "..."
+    return text[:max_length - 3] + "..."
 
-def scan_large_files(folder_path: str, dir_pattern: List[str]=[], min_file_size: int=MIN_FILE_SIZE):
+
+def scan_large_files(folder_path: str,
+                     dir_pattern: List[str] = None,
+                     min_file_size: int = MIN_FILE_SIZE):
     """
     扫描大文件
     """
@@ -52,7 +59,7 @@ def scan_large_files(folder_path: str, dir_pattern: List[str]=[], min_file_size:
         if dir_pattern != "":
             for folder in folders:
                 folder_path = os.path.join(root, folder)
-                if folder in dir_pattern and  not os.path.islink(folder_path):
+                if folder in dir_pattern and not os.path.islink(folder_path):
                     folder_size = get_dir_size(folder_path)
                     if folder_size > min_file_size:
                         large_files.append((folder_path, folder_size))
@@ -70,9 +77,12 @@ def scan_large_files(folder_path: str, dir_pattern: List[str]=[], min_file_size:
         print(row_format.format("Path", "Size"))
         large_files.sort(key=lambda x: x[1], reverse=True)
         for file_path, file_size in large_files:
-            print(row_format.format(format_with_ellipsis(file_path, 50), sizeof_fmt(file_size)))
+            print(
+                row_format.format(format_with_ellipsis(file_path, 50),
+                                  sizeof_fmt(file_size)))
     else:
         print("没有找到大文件。")
+
 
 if __name__ == "__main__":
     typer.run(scan_large_files)

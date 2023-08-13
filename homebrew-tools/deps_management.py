@@ -4,14 +4,17 @@
 # Copyright © 2023 n3xtchen <echenwen@gmail.com>
 #
 # Distributed under terms of the GPL-2.0 license.
-
 """
 依赖管理
 """
 
 import sys
 
+
 def main():
+    """
+    解析依赖
+    """
     # 从标准输入中读取数据
     lines = sys.stdin.readlines()
 
@@ -25,7 +28,9 @@ def main():
             dep_cnt[dep] = dep_cnt.get(dep, 0) + 1
 
     for dep, cnt in dep_cnt.items():
-        if cnt == 0: print(dep)
+        if cnt == 0:
+            print(dep)
+
 
 if __name__ == "__main__":
     main()
