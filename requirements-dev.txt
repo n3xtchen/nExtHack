@@ -4,9 +4,6 @@
 #
 #    pip-compile requirements-dev.in
 #
---index-url http://mirrors.aliyun.com/pypi/simple/
---trusted-host mirrors.aliyun.com
-
 astroid==2.15.6
     # via pylint
 certifi==2023.7.22
@@ -67,7 +64,7 @@ typing-extensions==4.7.1
     # via
     #   -r requirements.txt
     #   typer
-urllib3==2.0.4
+urllib3==2.0.6
     # via
     #   -r requirements.txt
     #   requests
