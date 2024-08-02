@@ -1,5 +1,3 @@
-[build-system]
-
 [project]
 name = "dns-updater"
 version = "1.0.0"
