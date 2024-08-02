@@ -1,0 +1,24 @@
+[build-system]
+
+[project]
+name = "dns-updater"
+version = "1.0.0"
+dependencies = [
+  "aliyun-python-sdk-core",
+  "aliyun-python-sdk-alidns"
+]
+requires-python = ">=3.12"
+authors = [
+  {name = "n3xtchen", email = "echenwen@gmail.com"}
+]
+maintainers = [
+  {name = "n3xtchen", email = "echenwen@gmail.com"}
+]
+description = "Aliyun DNS Updater"
+readme = "README.md"
+license = {file = "LICENSE.txt"}
+keywords = ["dns", "aliyun"]
+classifiers = [
+  "Development Status :: 4 - Beta",
+  "Programming Language :: Python"
+]
