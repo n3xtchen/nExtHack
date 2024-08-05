@@ -20,3 +20,33 @@ classifiers = [
   "Development Status :: 4 - Beta",
   "Programming Language :: Python"
 ]
+
+[project.optional-dependencies]
+dev = [
+  "pylint",
+  "pytest",
+  "yapf"
+]
+
+[tool.yapf]
+based_on_style = "pep8"
+indent_width = 4
+
+[tool.pytest.ini_options]
+addopts = "--capture=no"
+
+[tool.pyright]
+include = ["dns_updater", "tests"]
+exclude = ["**/node_modules",
+    "**/__pycache__",
+    "src/experimental",
+    "src/typestubs"
+]
+
+defineConstant = { DEBUG = true }
+venv = "homelab_test"
+
+executionEnvironments = [
+  { root = "dns_updater"},
+  { root = "tests", extraPaths = ["."]}
+]
