@@ -47,6 +47,6 @@ defineConstant = { DEBUG = true }
 venv = "homelab_test"
 
 executionEnvironments = [
-  { root = "dns_updater"},
+  { root = "."},
   { root = "tests", extraPaths = ["."]}
 ]

@@ -9,16 +9,33 @@
 
 """
 
-import tomllib
-
+from dns_updater.dns_updater import get_outer_ip,update_dns_record
 from dns_updater.AliApi import AliApi
 
-def test_answer():
-    """test"""
-    with open('config.toml', 'rb') as f:
-        config = tomllib.load(f)
-        print(config)
+SUBDOMAIN = "home.n3xt.space"
 
-        print(AliApi)
-        # ali = dns_updater.AliApi(config["access_key"], config["access_secret"])
-        # ali.describe_subdomain_record(config["sub_domain"])
+def test_credential():
+    """测试阿里Key"""
+
+    ali = AliApi()
+    print(ali.config.sections())
+
+def test_get_dns_record():
+    """测试查询dns记录"""
+
+    ali = AliApi()
+    ali.describe_subdomain_record(SUBDOMAIN)
+
+def test_update_dns_record_with_ip():
+    """测试更新dns记录"""
+    ali = AliApi()
+    ali.update_subdomain_record(SUBDOMAIN, "120.36.84.161")
+
+def test_ip():
+    """测试外网IP"""
+    print(get_outer_ip())
+
+def test_update_dns_record():
+    """更新 dns 记录"""
+    update_dns_record()
+
