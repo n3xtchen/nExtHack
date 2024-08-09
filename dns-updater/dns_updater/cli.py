@@ -19,7 +19,10 @@ def get_outer_ip():
     with urllib.request.urlopen('https://ifconfig.me/ip') as response:
         return response.read().decode("utf-8")
 
-if __name__ == "__main__":
+def run():
+    """
+    脚本入口
+    """
 
     parser = argparse.ArgumentParser(description='Process some integers.')
     parser.add_argument('subdomain')

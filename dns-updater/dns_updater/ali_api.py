@@ -71,7 +71,7 @@ class AliApi:
         request.set_accept_format('json')
         request.set_SubDomain(sub_domain)
         response = self.client.do_action_with_exception(request)
-        record = json.loads(str(response))["DomainRecords"]["Record"][0]
+        record = json.loads(str(response, encoding="utf-8"))["DomainRecords"]["Record"][0]
         return record["RR"], record["Value"], record["RecordId"]
 
     def update_subdomain_record(self, sub_domain, new_ip):
