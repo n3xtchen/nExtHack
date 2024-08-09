@@ -21,6 +21,9 @@ classifiers = [
   "Programming Language :: Python"
 ]
 
+[project.scripts]
+dns_updater = "dns_updater.cli:run"
+
 [project.optional-dependencies]
 dev = [
   "pylint",
