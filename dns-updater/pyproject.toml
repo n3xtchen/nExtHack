@@ -1,0 +1,55 @@
+[project]
+name = "dns-updater"
+version = "1.0.0"
+dependencies = [
+  "aliyun-python-sdk-core",
+  "aliyun-python-sdk-alidns"
+]
+requires-python = ">=3.12"
+authors = [
+  {name = "n3xtchen", email = "echenwen@gmail.com"}
+]
+maintainers = [
+  {name = "n3xtchen", email = "echenwen@gmail.com"}
+]
+description = "Aliyun DNS Updater"
+readme = "README.md"
+license = {file = "LICENSE.txt"}
+keywords = ["dns", "aliyun"]
+classifiers = [
+  "Development Status :: 4 - Beta",
+  "Programming Language :: Python"
+]
+
+[project.scripts]
+dns_updater = "dns_updater.cli:run"
+
+[project.optional-dependencies]
+dev = [
+  "pylint",
+  "pytest",
+  "yapf"
+]
+
+[tool.yapf]
+based_on_style = "pep8"
+indent_width = 4
+
+[tool.pytest.ini_options]
+addopts = "--capture=no"
+
+[tool.pyright]
+include = ["dns_updater", "tests"]
+exclude = ["**/node_modules",
+    "**/__pycache__",
+    "src/experimental",
+    "src/typestubs"
+]
+
+defineConstant = { DEBUG = true }
+venv = "homelab_test"
+
+executionEnvironments = [
+  { root = "."},
+  { root = "tests", extraPaths = ["."]}
+]
