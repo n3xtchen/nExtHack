@@ -6,7 +6,9 @@
 # Distributed under terms of the GPL-2.0 license.
 
 """
+openai 官方 function calling
 
+参考：https://platform.openai.com/docs/guides/function-calling?api-mode=responses&example=get-weather#function-calling-steps
 """
 
 # 让 LLM 生成要调度的代码
