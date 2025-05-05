@@ -15,6 +15,7 @@ license = "MIT"
 license-files = ["LICEN[CS]E*"]
 
 dependencies = [
+    "playwright"
 ]
 
 [project.urls]

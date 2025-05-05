@@ -11,6 +11,8 @@ build==1.2.2.post1
     # via pip-tools
 click==8.1.8
     # via pip-tools
+greenlet==3.1.1
+    # via playwright
 iniconfig==2.1.0
     # via pytest
 packaging==24.2
@@ -19,14 +21,20 @@ packaging==24.2
     #   pytest
 pip-tools==7.4.1
     # via auto_post (pyproject.toml)
+playwright==1.51.0
+    # via auto_post (pyproject.toml)
 pluggy==1.5.0
     # via pytest
+pyee==12.1.1
+    # via playwright
 pyproject-hooks==1.2.0
     # via
     #   build
     #   pip-tools
 pytest==8.3.5
     # via auto_post (pyproject.toml)
+typing-extensions==4.13.1
+    # via pyee
 wheel==0.45.1
     # via pip-tools
 
