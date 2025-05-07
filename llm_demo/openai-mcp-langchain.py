@@ -6,9 +6,14 @@
 # Distributed under terms of the GPL-2.0 license.
 
 """
+使用 langraph react agent 调用 mcp
 
+参考：
+- https://medium.com/ideaboxai/model-context-protocol-with-langchain-agent-client-f9562d2790b3
+- https://github.com/langchain-ai/langchain-mcp-adapters
 """
 
+import os
 import asyncio
 from langchain_mcp_adapters.client import MultiServerMCPClient
 from langgraph.prebuilt import create_react_agent
@@ -30,11 +35,21 @@ async def main():
             llm,
             client.get_tools()
         )
-        weather_response = await agent.ainvoke(
-            {"messages": [{"role": "user", "content": "what is the weather in Paris today?"}]}
-        )
-        print(weather_response)
+        query = "What's the weather like in Paris today?"
+        # weather_response = await agent.ainvoke(
+        #     {"messages": [{"role": "user", "content": query}]}
+        # )
+        # print(weather_response)
+        
 
+        inputs = {"messages": [("user", query)]}
+        async for s in agent.astream(inputs):
+            print(s)
+            # message = s["mssages"][-1]
+            # if isinstance(message, tuple):
+            #     print(message)
+            # else:
+            #     message.pretty_print()
 
 if __name__ == "__main__":
     asyncio.run(main())
