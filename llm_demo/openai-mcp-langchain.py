@@ -41,7 +41,6 @@ async def main():
         # )
         # print(weather_response)
         
-
         inputs = {"messages": [("user", query)]}
         async for s in agent.astream(inputs):
             print(s)
