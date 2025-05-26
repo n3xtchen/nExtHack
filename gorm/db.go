@@ -8,18 +8,29 @@
 package db
 
 import (
+	"sync"
+
 	"gorm.io/driver/sqlite"
 	"gorm.io/gorm"
 )
 
-type Product struct {
+type Category struct {
 	gorm.Model
-	Code  string
-	Price uint
-	Rate  uint
+	Name     string
+	Products []Product
 }
 
-var db *gorm.DB
+type Product struct {
+	gorm.Model
+	Code       string
+	Price      uint
+	Rate       uint
+	CategoryID uint
+	Category   Category
+}
+
+var _db *gorm.DB
+var once sync.Once
 
 func InitDB() {
 	db, err := gorm.Open(sqlite.Open("test.db"), &gorm.Config{})
@@ -28,10 +39,20 @@ func InitDB() {
 	}
 
 	// 迁移 schema
-	db.AutoMigrate(&Product{})
+	db.AutoMigrate(&Product{}, &Category{})
+
+	_db = db
 }
 
 func NewDBConn() *gorm.DB {
-	mydb := db
-	return mydb
+
+	once.Do(func() {
+		InitDB()
+	})
+
+	if _db == nil {
+		panic("singleton instance is nil after initialization")
+	}
+
+	return _db
 }
