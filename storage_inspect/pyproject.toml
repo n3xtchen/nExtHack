@@ -1,0 +1,30 @@
+[tool.yapf]
+based_on_style = "pep8"
+indent_width = 4
+
+[tool.pytest.ini_options]
+addopts = "--capture=no"
+
+[tool.pyright]
+exclude = [
+  "**/__pycache__"
+]
+ignore = [
+]
+
+defineConstant = { DEBUG = true }
+venv = "nexthack"
+stubPath = "stubs"
+
+reportMissingImports = true
+reportMissingTypeStubs = false
+reportIncompleteStub = true
+reportInvalidStubStatement = true
+
+reportGeneralTypeIssues = false
+
+# self 都识别不了
+reportUndefinedVariable = false
+
+pythonVersion = "3.11"
+pythonPlatform = "Darwin"
