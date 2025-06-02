@@ -6,7 +6,6 @@ indent_width = 4
 addopts = "--capture=no"
 
 [tool.pyright]
-include = ["storage_inspect", "homebrew-tools", "npjm"]
 exclude = [
   "**/__pycache__"
 ]
@@ -29,10 +28,3 @@ reportUndefinedVariable = false
 
 pythonVersion = "3.11"
 pythonPlatform = "Darwin"
-
-executionEnvironments = [
-  { root = "tests", extraPaths = ["."] },
-  { root = "storage_inspect" },
-  { root = "homebrew-tools" },
-  { root = "npjm" }
-]
