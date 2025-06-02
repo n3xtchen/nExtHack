@@ -1,0 +1,33 @@
+[project]
+name = "auto_post"
+version = "0.0.1"
+authors = [
+  { name="n3xtchen", email="echenwen@gmail.com" },
+]
+description = "自动文章发送工具"
+readme = "README.md"
+requires-python = ">=3.8"
+classifiers = [
+    "Programming Language :: Python :: 3",
+    "Operating System :: OS Independent",
+]
+license = "MIT"
+license-files = ["LICEN[CS]E*"]
+
+dependencies = [
+    "playwright"
+]
+
+[project.urls]
+Homepage = "https://github.com/pypa/sampleproject"
+Issues = "https://github.com/pypa/sampleproject/issues"
+
+[project.optional-dependencies]
+dev = [
+    "pip-tools",
+    "pytest"
+]
+
+[build-system]
+requires = ["setuptools >= 77.0.3"]
+build-backend = "setuptools.build_meta"
