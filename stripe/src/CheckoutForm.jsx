@@ -25,10 +25,10 @@ export default function CheckoutForm() {
 
     const { error } = await stripe.confirmPayment({
       elements,
-      confirmParams: {
-        // Make sure to change this to your payment completion page
-        return_url: `${window.location.protocol}//${window.location.host}/complete`
-      },
+      // confirmParams: {
+      //   // Make sure to change this to your payment completion page
+      //   return_url: `${window.location.protocol}//${window.location.host}/complete`
+      // },
     });
 
     // This point will only be reached if there is an immediate error when
