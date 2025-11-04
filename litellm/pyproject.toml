@@ -1,0 +1,13 @@
+[project]
+name = "litellm-proxy-client"
+version = "0.1.0"
+description = "Add your description here"
+readme = "README.md"
+requires-python = ">=3.12"
+dependencies = [
+    "litellm[proxy]>=1.74.0",
+]
+
+[project.scripts]
+litellm = "litellm:run_server"
+
