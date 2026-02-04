@@ -9,12 +9,14 @@ dependencies = [
     "html2text>=2025.4.15",
     "jsonref>=1.1.0",
     "jupytext>=1.19.1",
+    "langchain-google-genai>=4.2.0",
     "matplotlib>=3.10.8",
     "paddlenlp>=2.5.2",
     "paddleocr>=3.3.3",
     "pillow>=12.1.0",
     "pymupdf>=1.26.7",
     "ragas>=0.4.3",
+    "torch>=2.10.0",
     "unstructured[md,pdf]>=0.18.27",
 ]
 
