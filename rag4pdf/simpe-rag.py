@@ -257,3 +257,29 @@ print("Reference:", eval_dataset[n].reference)
 
 # %%
 df.to_json(eval_path)
+
+# %% [markdown]
+# ## 3. 评测实验
+
+# %%
+from ragas import Dataset
+
+# Create a new dataset
+dataset = Dataset(name="维度建模", backend="local/jsonl", root_dir="./ragas_data")
+
+# %%
+import pandas as pd
+
+df = pd.read_json(eval_path)
+
+for _, row in df.iterrows():
+    dataset.append({"question": row["user_input"], "expected_answer": row["reference"]})
+
+dataset.save()
+
+# %%
+df
+
+# %%
+
+# %%
