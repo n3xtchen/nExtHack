@@ -261,6 +261,9 @@ df.to_json(eval_path)
 # %% [markdown]
 # ## 3. 评测实验
 
+# %% [markdown]
+# ### 3.1 载入评测集
+
 # %%
 from ragas import Dataset
 
@@ -277,9 +280,68 @@ for _, row in df.iterrows():
 
 dataset.save()
 
-# %%
-df
+# %% [markdown]
+# ### 3.2 定义 RAG
+
+# %% [markdown]
+# ### 3.3 评测
 
 # %%
+ANSWER_CORRECTNESS_PROMPT_SIMPLE = """评估生成答案相对于参考答案的准确性。
+
+**问题**：{user_input}
+
+**参考答案**：{reference}
+
+**生成答案**：{generated_answer}
+
+**评估要求**：
+1. 检查事实是否正确
+2. 检查是否包含所有关键信息
+3. 检查语义是否一致
+
+给出 0-5 分数（5=完美，0=完全错误）和简短理由。
+
+输出格式：
+```json
+{
+  "score": <分数>,
+  "reasoning": "<理由>"
+}
+```
+"""
 
 # %%
+from ragas.metrics import numeric_metric
+from ragas.metrics.result import MetricResult
+
+@numeric_metric(name="correctness")
+def correctness_metric(prediction: float, actual: float):
+    """Calculate correctness of the prediction."""
+    if isinstance(prediction, str) and "ERROR" in prediction:
+        return 0.0
+    result = 1.0 if abs(prediction - actual) < 1e-5 else 0.0
+    return MetricResult(value=result, reason=f"Prediction: {prediction}, Actual: {actual}")
+
+
+# %%
+from ragas import experiment
+
+@experiment()
+async def run_experiment(row):
+    question = row["question"]
+    expected_result = row["expected_answer"]
+
+    
+    response = rag_agent.query(question)
+
+    # Calculate the correctness metric
+    correctness = correctness_metric.score(prediction=prediction.get("result"), actual=expected_result)
+
+    return {
+        "expression": expression,
+        "expected_result": expected_result,
+        "prediction": prediction.get("result"),
+        "log_file": prediction.get("log_file"),
+        "correctness": correctness.value
+    }
