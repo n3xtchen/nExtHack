@@ -4,13 +4,6 @@ from typing import Any, Dict, List, Optional
 
 from google import genai
 
-DOCUMENTS = [
-    "Ragas are melodic frameworks in Indian classical music.",
-    "There are many types of ragas, each with its own mood and time of day.",
-    "Ragas are used to evoke specific emotions in the listener.",
-    "The performance of a raga involves improvisation within a set structure.",
-    "Ragas can be performed on various instruments or sung vocally.",
-]
 
 
 class BaseRetriever:
@@ -217,46 +210,21 @@ class SimpleRAG:
             }
 
 
-def default_rag_client(llm_client, model_name: str = "gemini-2.5-pro") -> SimpleRAG:
+def default_rag_client(llm_client, model_name: str = "gemini-2.5-pro", documents: Optional[List[str]] = None) -> SimpleRAG:
     """
     Create a default RAG client with OpenAI LLM and optional retriever.
 
     Args:
         llm_client: LLM client with a generate() method
         model_name: Default model to use for generation
+        documents: Optional list of documents to add
     Returns:
         ExampleRAG instance
     """
     retriever = SimpleKeywordRetriever()
     client = SimpleRAG(llm_client=llm_client, retriever=retriever, model_name=model_name)
-    client.add_documents(DOCUMENTS)  # Add default documents
+    if documents:
+        client.add_documents(documents)
     return client
 
 
-if __name__ == "__main__":
-    from dotenv import load_dotenv
-    load_dotenv()
-
-    try:
-        api_key = os.environ["GOOGLE_API_KEY"]
-    except KeyError:
-        print("Error: GOOGLE_API_KEY environment variable is not set.")
-        print("Please set your Google API key in .env file:")
-        print("GOOGLE_API_KEY='your_google_api_key'")
-        exit(1)
-
-    # Initialize RAG system
-    client = genai.Client(api_key=api_key)
-    r = SimpleKeywordRetriever()
-    rag_client = SimpleRAG(llm_client=client, retriever=r)
-
-    # Add documents
-    rag_client.add_documents(DOCUMENTS)
-
-    # Run query
-    query = "What is Ragas"
-    print(f"Query: {query}")
-    response = rag_client.query(query, top_k=3)
-
-    print("Response:", response["answer"])
-    print(f"Run ID: {response['run_id']}")
