@@ -74,6 +74,7 @@ class SimpleRAG:
         llm_client,
         retriever: Optional[BaseRetriever] = None,
         system_prompt: Optional[str] = None,
+        model_name: str = "gemini-2.5-pro",
     ):
         """
         Initialize RAG system
@@ -82,16 +83,18 @@ class SimpleRAG:
             llm_client: LLM client with a generate() method
             retriever: Document retriever (defaults to SimpleKeywordRetriever)
             system_prompt: System prompt template for generation
+            model_name: Default model to use for generation
         """
         self.llm_client = llm_client
         self.retriever = retriever or SimpleKeywordRetriever()
+        self.model_name = model_name
         self.system_prompt = (
             system_prompt
-            or """Answer the following question based on the provided documents:
-                                Question: {query}
-                                Documents:
+            or """基于提供的文档回答以下问题：
+                                问题: {query}
+                                文档:
                                 {context}
-                                Answer:
+                                回答:
                             """
         )
         self.documents = []
@@ -141,13 +144,14 @@ class SimpleRAG:
 
         return retrieved_docs
 
-    def generate_response(self, query: str, top_k: int = 3) -> str:
+    def generate_response(self, query: str, top_k: int = 3, model_name: Optional[str] = None) -> str:
         """
         Generate response to query using retrieved documents
 
         Args:
             query: User query
             top_k: Number of documents to retrieve
+            model_name: Optional model to use for this specific request
 
         Returns:
             Generated response
@@ -175,7 +179,7 @@ class SimpleRAG:
 
         try:
             response = self.llm_client.models.generate_content(
-                model="gemini-2.0-flash", contents=prompt
+                model=model_name or self.model_name, contents=prompt
             )
             return response.text.strip()
 
@@ -183,7 +187,7 @@ class SimpleRAG:
             return f"Error generating response: {str(e)}"
 
     def query(
-        self, question: str, top_k: int = 3, run_id: Optional[str] = None
+        self, question: str, top_k: int = 3, run_id: Optional[str] = None, model_name: Optional[str] = None
     ) -> Dict[str, Any]:
         """
         Complete RAG pipeline: retrieve documents and generate response
@@ -192,6 +196,7 @@ class SimpleRAG:
             question: User question
             top_k: Number of documents to retrieve
             run_id: Optional run ID for tracing (auto-generated if not provided)
+            model_name: Optional model to use for this specific request
 
         Returns:
             Dictionary containing response and run_id
@@ -201,7 +206,7 @@ class SimpleRAG:
             run_id = f"{datetime.now().strftime('%Y%m%d_%H%M%S')}_{hash(question) % 10000:04d}"
 
         try:
-            response = self.generate_response(question, top_k)
+            response = self.generate_response(question, top_k, model_name=model_name)
             return {"answer": response, "run_id": run_id}
 
         except Exception as e:
@@ -212,17 +217,18 @@ class SimpleRAG:
             }
 
 
-def default_rag_client(llm_client) -> SimpleRAG:
+def default_rag_client(llm_client, model_name: str = "gemini-2.5-pro") -> SimpleRAG:
     """
     Create a default RAG client with OpenAI LLM and optional retriever.
 
     Args:
         llm_client: LLM client with a generate() method
+        model_name: Default model to use for generation
     Returns:
         ExampleRAG instance
     """
     retriever = SimpleKeywordRetriever()
-    client = SimpleRAG(llm_client=llm_client, retriever=retriever)
+    client = SimpleRAG(llm_client=llm_client, retriever=retriever, model_name=model_name)
     client.add_documents(DOCUMENTS)  # Add default documents
     return client
 
