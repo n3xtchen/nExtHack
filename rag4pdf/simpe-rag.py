@@ -16,15 +16,20 @@
 # # Simple Rag
 
 # %%
+# %load_ext viztracer
+
+# %%
 import os
+from pathlib import Path
 
 # 替换为你的代理端口，通常是 7890, 7897, 1080 等
-proxy = "http://127.0.0.1:7890" 
+proxy = None # "http://127.0.0.1:7890" 
 
-os.environ["http_proxy"] = proxy
-os.environ["https_proxy"] = proxy
-os.environ["HTTP_PROXY"] = proxy
-os.environ["HTTPS_PROXY"] = proxy
+if proxy:
+    os.environ["http_proxy"] = proxy
+    os.environ["https_proxy"] = proxy
+    os.environ["HTTP_PROXY"] = proxy
+    os.environ["HTTPS_PROXY"] = proxy
 
 # %%
 # 加载 .env 文件中的环境变量
@@ -109,6 +114,24 @@ print(f"Chunk Num: {i}")
 
 # %%
 from ragas.cache import DiskCacheBackend
+
+# 1. 开启本地磁盘缓存
+# 这会在当前目录下创建一个 .ragas_cache 文件夹
+cache = DiskCacheBackend()
+
+# 2. 初始化大模型客户端
+from langchain_google_genai import ChatGoogleGenerativeAI, GoogleGenerativeAIEmbeddings
+gemini_llm = ChatGoogleGenerativeAI(model=llm_model)
+gemini_embeddings = GoogleGenerativeAIEmbeddings(model=embedding_model)
+
+# 3. 构建工厂类，并使用缓存
+from ragas.embeddings import LangchainEmbeddingsWrapper
+from ragas.llms import LangchainLLMWrapper
+generator_llm = LangchainLLMWrapper(gemini_llm, cache=cache)
+embeddings = LangchainEmbeddingsWrapper(gemini_embeddings, cache=cache)
+
+# %%
+from ragas.cache import DiskCacheBackend
 from ragas.embeddings.base import embedding_factory
 from ragas.llms import llm_factory
 
@@ -118,27 +141,68 @@ cache = DiskCacheBackend()
 
 # 2. 初始化大模型客户端
 
-#from google import genai
-#client = genai.Client()
+from google import genai
+client = genai.Client()
 
-from langchain_google_genai import ChatGoogleGenerativeAI, GoogleGenerativeAIEmbeddings
-gemini_llm = ChatGoogleGenerativeAI(model=llm_model)
-gemini_embeddings = GoogleGenerativeAIEmbeddings(model=embedding_model)
+import typing as t
+from langchain_core.outputs import Generation, LLMResult
+from ragas.run_config import RunConfig
+from ragas.cache import CacheInterface
+from ragas.llms import BaseRagasLLM
+class GoogleGenAIWrapper(BaseRagasLLM):
+    def __init__(self, 
+        client, 
+        model: str = "gemini-2.0-flash",
+        run_config: t.Optional[RunConfig] = None,
+        cache: t.Optional[CacheInterface] = None,
+        bypass_temperature: bool = False,
+        bypass_n: bool = False,
+    ):
 
+        super().__init__(cache=cache)
+        # 初始化同步 client，但只持有它的 aio 引用
+        self.client = client
+        self.model = model
+
+        if run_config is None:
+            run_config = RunConfig()
+        self.run_config = run_config
+        self.bypass_temperature: bool = bypass_temperature
+        self.bypass_n: bool = bypass_n
+
+    def generate_text(self, prompt: str, **kwargs) -> LLMResult:
+        # 模拟 Ragas 需要的异步文本生成
+        response = self.client.models.generate_content(
+            model=self.model,
+            contents=prompt
+        )
+        return LLMResult(generations=[[Generation(text=response.text)]])
+    
+    async def agenerate_text(self, prompt: str, **kwargs) -> LLMResult:
+        # 模拟 Ragas 需要的异步文本生成
+        response = await self.client.aio.models.generate_content(
+            model=self.model,
+            contents=prompt
+        )
+        return LLMResult(generations=[[Generation(text=response.text)]])
+
+    # 2. 这里的 is_finished 通常在基类有默认实现，但如果报错请补上
+    def is_finished(self, response):
+        return True
+        
 # 3. 构建工厂类，并使用缓存
 
 # generator_llm = llm_factory(provider="google", model=llm_model, client=client, cache=cache)
-# embeddings = embedding_factory(provider="google", model=embedding_model, client=client, cache=cache)
+generator_llm = GoogleGenAIWrapper(client=client, model=llm_model, cache=cache)
+embeddings = embedding_factory(provider="google", model=embedding_model, client=client, cache=cache)
 # from ragas.embeddings import GoogleEmbeddings
 # embeddings = GoogleEmbeddings(client=client, model=embedding_model, cache=cache)
 
-from ragas.embeddings import LangchainEmbeddingsWrapper
-from ragas.llms import LangchainLLMWrapper
-generator_llm = LangchainLLMWrapper(gemini_llm, cache=cache)
-embeddings = LangchainEmbeddingsWrapper(gemini_embeddings, cache=cache)
-
 # %% [markdown]
 # ### 2.2. 生成评测集
+
+# %%
+await generator_llm.agenerate_text("hi")
 
 # %%
 from ragas.run_config import RunConfig
@@ -219,6 +283,7 @@ kg.save(kg_path)
 # #### 2.2.2. 生成评测集
 
 # %%
+# %%viztracer
 from ragas.testset import TestsetGenerator
 
 # 2. 初始化生成器 (此时它已拥有所有向量和实体信息)
@@ -238,7 +303,8 @@ query_distribution = [
 testset = generator.generate(
     testset_size=testset_size,
     query_distribution=query_distribution,
-    run_config=run_config
+    # run_config=run_config
+    with_debugging_logs=True
 )
 
 df = testset.to_pandas()
@@ -276,15 +342,101 @@ import pandas as pd
 df = pd.read_json(eval_path)
 
 for _, row in df.iterrows():
-    dataset.append({"question": row["user_input"], "expected_answer": row["reference"]})
+    dataset.append({"user_input": row["user_input"], "reference": row["reference"]})
 
 dataset.save()
+
+# %%
+dataset.to_pandas()
 
 # %% [markdown]
 # ### 3.2 定义 RAG
 
+# %%
+from google import genai
+from rag import default_rag_client
+api_key = os.environ["GOOGLE_API_KEY"]
+client = genai.Client(api_key=api_key)
+
+
+# %%
+class SimpleAgent:
+
+    def __init__(self, client, system_prompt: str=None):
+
+        self.client = client
+        self.system_prompt = system_prompt or """回答如下问题：
+problem：{user_input}
+answer：
+
+输出格式：
+
+```json
+{{
+  "answer": 答案
+}}
+```
+        """
+
+    def query(self, user_input: str):
+        
+        response = self.client.models.generate_content(
+            model="gemini-2.5-flash",
+            config={"response_mime_type": "application/json"},
+            contents=self.system_prompt.format(user_input=user_input)
+        )
+
+        import json
+        result = json.loads(response.text.strip())
+
+        return {
+            "answer": result["answer"]
+        }
+
+
+    async def aquery_manual(self, user_input: str):
+        # 使用 asyncio.to_thread 在线程中执行同步调用
+        loop = asyncio.get_event_loop()
+        response = await loop.run_in_executor(
+            None,
+            lambda: self.client.models.generate_content(
+                model="gemini-2.5-flash",
+                config={"response_mime_type": "application/json"},
+                contents=self.system_prompt.format(user_input=user_input)
+            )
+        )
+        
+        import json
+        result = json.loads(response.text.strip())
+        return {
+            "answer": result["answer"]
+        }
+
+    async def aquery(self, user_input: str):
+        # 使用 asyncio.to_thread 在线程中执行同步调用
+        response = await self.client.aio.models.generate_content(
+            model="gemini-2.5-flash",
+            config={"response_mime_type": "application/json"},
+            contents=self.system_prompt.format(user_input=user_input)
+        )
+        
+        import json
+        result = json.loads(response.text.strip())
+        return {
+            "answer": result["answer"]
+        }
+
+rag_client = SimpleAgent(client)
+
+# %%
+dataset = Dataset.load(name="维度建模", backend="local/jsonl", root_dir="./ragas_data")
+d = dataset[3]
+user_input = d["user_input"]
+pred = rag_client.query(user_input)
+print(pred)
+
 # %% [markdown]
-# ### 3.3 评测
+# ### 3.3 构建指标(Metric)
 
 # %%
 ANSWER_CORRECTNESS_PROMPT_SIMPLE = """评估生成答案相对于参考答案的准确性。
@@ -293,7 +445,7 @@ ANSWER_CORRECTNESS_PROMPT_SIMPLE = """评估生成答案相对于参考答案的
 
 **参考答案**：{reference}
 
-**生成答案**：{generated_answer}
+**生成答案**：{prediction}
 
 **评估要求**：
 1. 检查事实是否正确
@@ -304,10 +456,10 @@ ANSWER_CORRECTNESS_PROMPT_SIMPLE = """评估生成答案相对于参考答案的
 
 输出格式：
 ```json
-{
+{{
   "score": <分数>,
   "reasoning": "<理由>"
-}
+}}
 ```
 """
 
@@ -315,33 +467,210 @@ ANSWER_CORRECTNESS_PROMPT_SIMPLE = """评估生成答案相对于参考答案的
 from ragas.metrics import numeric_metric
 from ragas.metrics.result import MetricResult
 
-@numeric_metric(name="correctness")
-def correctness_metric(prediction: float, actual: float):
-    """Calculate correctness of the prediction."""
-    if isinstance(prediction, str) and "ERROR" in prediction:
-        return 0.0
-    result = 1.0 if abs(prediction - actual) < 1e-5 else 0.0
-    return MetricResult(value=result, reason=f"Prediction: {prediction}, Actual: {actual}")
+@numeric_metric(name="correctness", allowed_values=(0.0, 5.0))
+def correctness_metric_sync(user_input: str, reference: str, prediction: str):
+    """Use LLM as judge with structured scoring."""
+    # 处理错误
+    if isinstance(prediction, str) and ("ERROR" in prediction or "Error" in prediction):
+        return MetricResult(value=0.0, reason=f"预测出错: {prediction}")
+    
+    prediction = str(prediction).strip()
+    reference = str(reference).strip()
+
+    try:
+        response = client.models.generate_content(
+            model="gemini-2.5-pro",
+            config={"response_mime_type": "application/json"},
+            contents=ANSWER_CORRECTNESS_PROMPT_SIMPLE.format(user_input=user_input, reference=reference, prediction=prediction)
+        )
+        
+        import json
+        judge_result = json.loads(response.text.strip())
+        result = float(judge_result["score"])
+        reason = judge_result["reasoning"]
+        
+    except Exception as e:
+        # 回退方案
+        result = 1.0 if prediction.lower() == actual.lower() else 0.0
+        reason = f"LLM调用失败: {str(e)} {response.text}"
+    
+    return MetricResult(value=result, reason=reason)
+
+
+@numeric_metric(name="correctness", allowed_values=(0.0, 5.0))
+async def correctness_metric(user_input: str, reference: str, prediction: str):
+    """Use LLM as judge with structured scoring."""
+    # 处理错误
+    if isinstance(prediction, str) and ("ERROR" in prediction or "Error" in prediction):
+        return MetricResult(value=0.0, reason=f"预测出错: {prediction}")
+    
+    prediction = str(prediction).strip()
+    reference = str(reference).strip()
+
+    try:
+        """
+        loop = asyncio.get_event_loop()
+        response = await loop.run_in_executor(
+            None,
+            lambda: client.models.generate_content(
+                model="gemini-2.5-pro",
+                config={"response_mime_type": "application/json"},
+                contents=ANSWER_CORRECTNESS_PROMPT_SIMPLE.format(user_input=user_input, reference=reference, prediction=prediction)
+            )
+        )
+        """
+
+        response = await client.aio.models.generate_content(
+            model="gemini-2.5-pro",
+            config={"response_mime_type": "application/json"},
+            contents=ANSWER_CORRECTNESS_PROMPT_SIMPLE.format(user_input=user_input, reference=reference, prediction=prediction)
+        )
+        
+        import json
+        judge_result = json.loads(response.text.strip())
+        result = float(judge_result["score"])
+        reason = judge_result["reasoning"]
+        
+    except Exception as e:
+        # 回退方案
+        result = 1.0 if prediction.lower() == actual.lower() else 0.0
+        reason = f"LLM调用失败: {str(e)} {response.text}"
+    
+    return MetricResult(value=result, reason=reason)
 
 
 # %%
+dataset = Dataset.load(name="维度建模", backend="local/jsonl", root_dir="./ragas_data")
+d = dataset[3]
+user_input = d["user_input"]
+reference = d["reference"]
+prediction = "根据提供的文档，“确认维度”是 **4步骤维度设计过程** 的一部分。 这个过程包含4个主要决策： 1. 选择业务过程 2. 声明粒度 3. **确认维度** 4. 确认事实"
+print(ANSWER_CORRECTNESS_PROMPT_SIMPLE.format(user_input=user_input, reference=reference, prediction=prediction))
+
+# %%
+start = time.time()
+correctness_metric.score(user_input=user_input, reference=reference, prediction=prediction)
+print(f"Correctness metric took: {time.time() - start:.2f}s")
+
+# %% [markdown]
+# ### 3.4 构建实验(Experiment)
+
+# %%
+import time
 from ragas import experiment
 
 @experiment()
 async def run_experiment(row):
-    question = row["question"]
-    expected_result = row["expected_answer"]
-
+    user_input = row["user_input"]
+    reference = row["reference"]
     
-    response = rag_agent.query(question)
+    # logging.debug(f"Question: {user_input}")
+    # start = time.time()
+    
+    response = await rag_client.aquery(user_input)
 
     # Calculate the correctness metric
-    correctness = correctness_metric.score(prediction=prediction.get("result"), actual=expected_result)
+    # correctness = await correctness_metric.ascore(user_input=user_input, reference=reference, prediction=response["answer"])
+    correctness = correctness_metric.score(user_input=user_input, reference=reference, prediction=response["answer"])
+
+    # logging.debug(f"Correctness metric took: {time.time() - start:.2f}s {user_input}")
 
     return {
-        "expression": expression,
-        "expected_result": expected_result,
-        "prediction": prediction.get("result"),
-        "log_file": prediction.get("log_file"),
+        "expression": user_input,
+        "expected_result": reference,
+        "result": response["answer"],
         "correctness": correctness.value
     }
+
+
+# %% [markdown]
+# ### 3.5 开始评测(Evaluation)
+
+# %%
+async def run_evaluation():
+    dataset = Dataset.load(name="维度建模", backend="local/jsonl", root_dir="./ragas_data")
+    #logging.info("Experiment started successfully!")
+    #start = time.time()
+    experiment_results: Experiment = await run_experiment.arun(dataset)
+    #logging.info(f"Experiment completed successfully! Total: {time.time() - start:.2f}s")
+    # Save experiment results to CSV
+    #experiment_results.save()
+    #jsonl_path: Path = Path("./ragas_data") / "experiments" / f"{experiment_results.name}.jsonl"
+    #logging.info(f"\nExperiment results saved to: {jsonl_path.resolve()}")
+
+    # Print results
+    # if experiment_results:
+    #    score = sum(result.get("correctness") or 0 for result in experiment_results)
+    #    total_count = len(experiment_results)
+    #    correctness = round(score / total_count) if total_count > 0 else 0
+    #    print(f"Results: {correctness}/{total_count}")
+
+    return experiment_results
+
+
+# %%
+# %%viztracer
+import asyncio
+asyncio.run(run_evaluation())
+
+
+# %%
+# %%viztracer
+async def fetch_data():
+    await asyncio.sleep(0.005)  # 模拟I/O操作
+    return 1
+async def process_data():
+    result = await fetch_data()
+    print(f"处理结果: {result}")
+
+asyncio.run(asyncio.gather(*[process_data() for _ in range(10)]))
+
+
+# %%
+# %%viztracer
+
+async def process_data():
+    result = await fetch_data()
+    result1 = await fetch_data2()
+async def fetch_data():
+    await asyncio.sleep(0.0001)  # 模拟I/O操作
+    return 1
+async def fetch_data2():
+    await asyncio.sleep(0.0002)  # 模拟I/O操作
+    return 2
+
+asyncio.run(process_data())
+
+
+# %%
+async def foo():
+    print("A")
+    x = await bar()
+    print("B", x)
+    return x + 1
+
+x = foo()
+
+# %%
+print(x.cr_code)
+
+# %%
+import dis
+dis.dis(x.cr_code)
+
+
+# %%
+async def foo():
+    print("A")
+    x = await bar()
+    print("B", x)
+    x = await ba()
+    return x + 1
+
+x = foo()
+
+# %%
+import dis
+dis.dis(x.cr_code)
+
+# %%
