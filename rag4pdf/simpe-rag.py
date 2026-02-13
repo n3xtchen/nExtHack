@@ -41,7 +41,7 @@ import logging
 logging.basicConfig(level=logging.WARNING)
 
 # %%
-under_n_chars = 100
+under_n_chars = 1000
 out_dir = "outputs"
 book = "数据仓库工具箱维度建模权威指南（第3版）"
 chapter = "2" # 可以设为 "*" 来匹配所有章节
@@ -55,8 +55,8 @@ query_dist = None
 
 # 使用 Glob 模式匹配文件
 in_path_pattern = f"{out_dir}/{book}/{chapter}.{book_fmt}"
-kg_path = f"{out_dir}/{book}/{chapter}-kg-{under_n_chars}.json"
-eval_path = f"{out_dir}/{book}/{chapter}-eval-{under_n_chars}.json"
+kg_path = f"{out_dir}/{book}/{chapter}-kg-cn-{under_n_chars}.json"
+eval_path = f"{out_dir}/{book}/{chapter}-eval-cn-{under_n_chars}.json"
 
 # %%
 # 使用 Glob 加载多个 Markdown 文件并转换为 Langchain Document
@@ -79,7 +79,7 @@ from langchain_text_splitters import RecursiveCharacterTextSplitter
 
 # 配置切分参数
 text_splitter = RecursiveCharacterTextSplitter(
-    chunk_size=1000,       # 每个 chunk 的字符数
+    chunk_size=under_n_chars,       # 每个 chunk 的字符数
     chunk_overlap=100,     # chunk 之间的重叠字符数
     length_function=len,
     is_separator_regex=False,
@@ -158,19 +158,31 @@ class GoogleGenAIWrapper(BaseRagasLLM):
         self.bypass_temperature: bool = bypass_temperature
         self.bypass_n: bool = bypass_n
 
-    def generate_text(self, prompt: str, **kwargs) -> LLMResult:
+    def generate_text(self, prompt: t.Any, **kwargs) -> LLMResult:
+        # 转换为字符串以处理 StringPromptValue 等对象
+        prompt_str = str(prompt)
+        # 强制要求中文输出
+        if "chinese" not in prompt_str.lower():
+             prompt_str += "\n\n请使用中文回答 (Please respond in Chinese)."
+             
         # 模拟 Ragas 需要的异步文本生成
         response = self.client.models.generate_content(
             model=self.model,
-            contents=prompt
+            contents=prompt_str
         )
         return LLMResult(generations=[[Generation(text=response.text)]])
     
-    async def agenerate_text(self, prompt: str, **kwargs) -> LLMResult:
+    async def agenerate_text(self, prompt: t.Any, **kwargs) -> LLMResult:
+        # 转换为字符串以处理 StringPromptValue 等对象
+        prompt_str = str(prompt)
+        # 强制要求中文输出
+        if "chinese" not in prompt_str.lower():
+             prompt_str += "\n\n请使用中文回答 (Please respond in Chinese)."
+
         # 模拟 Ragas 需要的异步文本生成
         response = await self.client.aio.models.generate_content(
             model=self.model,
-            contents=prompt
+            contents=prompt_str
         )
         return LLMResult(generations=[[Generation(text=response.text)]])
 
