@@ -354,16 +354,30 @@ from rag import default_rag_client
 api_key = os.environ["GOOGLE_API_KEY"]
 client = genai.Client(api_key=api_key)
 
-
 # %%
+import asyncio
+import json
+import logging
+import tenacity
+from google.genai import errors
+
+# 配置重试逻辑：指数退避，最多重试 5 次
+# 针对 429 (速率限制) 和 503 (服务不可用) 以及对应的异常类型进行重试
+def is_retryable_error(exception):
+    msg = str(exception)
+    return (isinstance(exception, (errors.ClientError, errors.ServerError)) or 
+            "429" in msg or 
+            "503" in msg)
+
 class SimpleAgent:
-
     def __init__(self, client, system_prompt: str=None):
-
         self.client = client
         self.system_prompt = system_prompt or """回答如下问题：
 problem：{user_input}
 answer：
+
+请使用中文回答 (Please respond in Chinese).
+
 
 输出格式：
 
@@ -374,6 +388,13 @@ answer：
 ```
         """
 
+    @tenacity.retry(
+        wait=tenacity.wait_exponential(multiplier=1, min=2, max=10),
+        stop=tenacity.stop_after_attempt(5),
+        retry=tenacity.retry_if_exception(is_retryable_error),
+        before_sleep=tenacity.before_sleep_log(logging.getLogger(__name__), logging.INFO),
+        reraise=True
+    )
     def query(self, user_input: str):
         try:
             response = self.client.models.generate_content(
@@ -382,19 +403,23 @@ answer：
                 contents=self.system_prompt.format(user_input=user_input)
             )
 
-            import json
             result = json.loads(response.text.strip())
-
             return {
                 "answer": result.get("answer", "No answer found in response.")
             }
         except Exception as e:
+            if is_retryable_error(e):
+                 raise e
             return {"answer": f"Error: {str(e)}"}
 
-
+    @tenacity.retry(
+        wait=tenacity.wait_exponential(multiplier=1, min=2, max=10),
+        stop=tenacity.stop_after_attempt(5),
+        retry=tenacity.retry_if_exception(is_retryable_error),
+        reraise=True
+    )
     async def aquery_manual(self, user_input: str):
         try:
-            # 使用 asyncio.to_thread 在线程中执行同步调用
             loop = asyncio.get_event_loop()
             response = await loop.run_in_executor(
                 None,
@@ -405,29 +430,36 @@ answer：
                 )
             )
             
-            import json
             result = json.loads(response.text.strip())
             return {
                 "answer": result.get("answer", "No answer found in response.")
             }
         except Exception as e:
+            if is_retryable_error(e):
+                raise e
             return {"answer": f"Error: {str(e)}"}
 
+    @tenacity.retry(
+        wait=tenacity.wait_exponential(multiplier=1, min=2, max=10),
+        stop=tenacity.stop_after_attempt(5),
+        retry=tenacity.retry_if_exception(is_retryable_error),
+        reraise=True
+    )
     async def aquery(self, user_input: str):
         try:
-            # 使用 aio client 执行异步调用
             response = await self.client.aio.models.generate_content(
                 model="gemini-2.0-flash",
                 config={"response_mime_type": "application/json"},
                 contents=self.system_prompt.format(user_input=user_input)
             )
             
-            import json
             result = json.loads(response.text.strip())
             return {
                 "answer": result.get("answer", "No answer found in response.")
             }
         except Exception as e:
+            if is_retryable_error(e):
+                raise e
             return {"answer": f"Error during aquery: {str(e)}"}
 
 rag_client = SimpleAgent(client)
@@ -459,6 +491,8 @@ ANSWER_CORRECTNESS_PROMPT_SIMPLE = """评估生成答案相对于参考答案的
 
 给出 0-5 分数（5=完美，0=完全错误）和简短理由。
 
+请使用中文回答 (Please respond in Chinese).
+
 输出格式：
 ```json
 {{
@@ -471,63 +505,87 @@ ANSWER_CORRECTNESS_PROMPT_SIMPLE = """评估生成答案相对于参考答案的
 # %%
 from ragas.metrics import numeric_metric
 from ragas.metrics.result import MetricResult
+import tenacity
+import json
+from google.genai import errors
+
+# 定义重试判断函数
+def is_retryable_error(exception):
+    msg = str(exception)
+    return (isinstance(exception, (errors.ClientError, errors.ServerError)) or 
+            "429" in msg or 
+            "503" in msg)
 
 @numeric_metric(name="correctness", allowed_values=(0.0, 5.0))
 def correctness_metric_sync(user_input: str, reference: str, prediction: str):
-    """Use LLM as judge with structured scoring."""
-    # 处理错误
+    """使用 LLM 作为裁判进行评分，包含重试机制。"""
     if isinstance(prediction, str) and ("ERROR" in prediction or "Error" in prediction):
         return MetricResult(value=0.0, reason=f"预测出错: {prediction}")
     
     prediction = str(prediction).strip()
     reference = str(reference).strip()
 
-    try:
-        response = client.models.generate_content(
-            model="gemini-2.5-pro",
+    # 封装带重试的内部调用
+    @tenacity.retry(
+        wait=tenacity.wait_exponential(multiplier=1, min=2, max=10),
+        stop=tenacity.stop_after_attempt(5),
+        retry=tenacity.retry_if_exception(is_retryable_error),
+        reraise=True
+    )
+    def _call_llm():
+        return client.models.generate_content(
+            model="gemini-2.0-flash",
             config={"response_mime_type": "application/json"},
             contents=ANSWER_CORRECTNESS_PROMPT_SIMPLE.format(user_input=user_input, reference=reference, prediction=prediction)
         )
-        
-        import json
+
+    try:
+        response = _call_llm()
         judge_result = json.loads(response.text.strip())
         result = float(judge_result["score"])
         reason = judge_result["reasoning"]
         
     except Exception as e:
-        # 回退方案
-        result = 1.0 if prediction.lower() == actual.lower() else 0.0
-        reason = f"LLM调用失败: {str(e)} {response.text}"
+        # 重试多次失败后的最终回退
+        result = 1.0 if prediction.lower() == reference.lower() else 0.0
+        reason = f"LLM 评分失败（已重试）: {str(e)}"
     
     return MetricResult(value=result, reason=reason)
 
 
 @numeric_metric(name="correctness", allowed_values=(0.0, 5.0))
 async def correctness_metric(user_input: str, reference: str, prediction: str):
-    """Use LLM as judge with structured scoring."""
-    # 处理错误
+    """使用 LLM 作为裁判进行异步评分，包含重试机制。"""
     if isinstance(prediction, str) and ("ERROR" in prediction or "Error" in prediction):
         return MetricResult(value=0.0, reason=f"预测出错: {prediction}")
     
     prediction = str(prediction).strip()
     reference = str(reference).strip()
 
-    try:
-        response = await client.aio.models.generate_content(
-            model="gemini-2.5-pro",
+    # 封装带重试的异步内部调用
+    @tenacity.retry(
+        wait=tenacity.wait_exponential(multiplier=1, min=2, max=10),
+        stop=tenacity.stop_after_attempt(5),
+        retry=tenacity.retry_if_exception(is_retryable_error),
+        reraise=True
+    )
+    async def _acall_llm():
+        return await client.aio.models.generate_content(
+            model="gemini-2.0-flash",
             config={"response_mime_type": "application/json"},
             contents=ANSWER_CORRECTNESS_PROMPT_SIMPLE.format(user_input=user_input, reference=reference, prediction=prediction)
         )
-        
-        import json
+
+    try:
+        response = await _acall_llm()
         judge_result = json.loads(response.text.strip())
         result = float(judge_result["score"])
         reason = judge_result["reasoning"]
         
     except Exception as e:
-        # 回退方案
-        result = 1.0 if prediction.lower() == actual.lower() else 0.0
-        reason = f"LLM调用失败: {str(e)} {response.text}"
+        # 重试多次失败后的最终回退
+        result = 1.0 if prediction.lower() == reference.lower() else 0.0
+        reason = f"LLM 评分失败（已重试）: {str(e)}"
     
     return MetricResult(value=result, reason=reason)
 
@@ -541,6 +599,7 @@ prediction = "根据提供的文档，“确认维度”是 **4步骤维度设�
 print(ANSWER_CORRECTNESS_PROMPT_SIMPLE.format(user_input=user_input, reference=reference, prediction=prediction))
 
 # %%
+import time
 start = time.time()
 correctness_metric.score(user_input=user_input, reference=reference, prediction=prediction)
 print(f"Correctness metric took: {time.time() - start:.2f}s")
@@ -572,7 +631,8 @@ async def run_experiment(row):
         "expression": user_input,
         "expected_result": reference,
         "result": response["answer"],
-        "correctness": correctness.value
+        "correctness": correctness.value,
+        "reason": correctness.reason
     }
 
 
@@ -602,8 +662,20 @@ async def run_evaluation():
 
 
 # %%
-# %%viztracer
+# # %%viztracer
 import asyncio
-asyncio.run(run_evaluation())
+experiment_results = asyncio.run(run_evaluation())
+
+# %%
+experiment_results.to_pandas()
+
+# %%
+# Print results
+print(experiment_results)
+if experiment_results:
+    score = sum(result.get("correctness") or 0 for result in experiment_results)
+    total_count = len(experiment_results)
+    correctness = round(score / total_count) if total_count > 0 else 0
+    print(f"Results: {correctness}/{total_count}")
 
 # %%
