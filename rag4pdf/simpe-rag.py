@@ -43,76 +43,62 @@ logging.basicConfig(level=logging.WARNING)
 under_n_chars = 100
 out_dir = "outputs"
 book = "数据仓库工具箱维度建模权威指南（第3版）"
-chapter = "2"
+chapter = "2" # 可以设为 "*" 来匹配所有章节
 book_fmt = "md"
 
-llm_model = "gemini-2.5-pro"
-embedding_model = "models/embedding-001"
+llm_model = "gemini-2.0-flash"
+embedding_model = "models/gemini-embedding-001"
 
 testset_size = 10
 query_dist = None
 
-in_path = f"{out_dir}/{book}/{chapter}.{book_fmt}"
+# 使用 Glob 模式匹配文件
+in_path_pattern = f"{out_dir}/{book}/{chapter}.{book_fmt}"
 kg_path = f"{out_dir}/{book}/{chapter}-kg-{under_n_chars}.json"
 eval_path = f"{out_dir}/{book}/{chapter}-eval-{under_n_chars}.json"
 
-# %% [markdown]
-# ## 1. 分块
+# %%
+# 使用 Glob 加载多个 Markdown 文件并转换为 Langchain Document
+from langchain_core.documents import Document
+import glob
+
+documents = []
+files = glob.glob(in_path_pattern)
+
+for file_path in files:
+    with open(file_path, 'r', encoding='utf-8') as f:
+        content = f.read()
+    documents.append(Document(page_content=content, metadata={"source": file_path}))
+
+print(f"成功从 {in_path_pattern} 匹配到 {len(files)} 个文件，共转换为 {len(documents)} 个 Document 对象")
 
 # %%
-from unstructured.partition.md import partition_md
-from unstructured.chunking.title import chunk_by_title
+# 文档切分 (Chunking)
+from langchain_text_splitters import RecursiveCharacterTextSplitter
 
-# 1. 将 Markdown 文件解析为 Element 对象列表
-# partition_md 会自动识别标题（Title）、正文（NarrativeText）、列表（ListItem）等
-elements = partition_md(filename=in_path)
-
-# 2. 按照标题进行分块
-# chunk_by_title 会在遇到新的标题（Title 元素）时启动一个新块
-chunks = chunk_by_title(
-    elements,
-    combine_text_under_n_chars=under_n_chars,  # 是否合并较小的块，设为0表示严格按标题切分
-    max_characters=1000,           # 每个分块的最大字符数（硬限制）
-    new_after_n_chars=500,         # 超过此字数后，遇到新的标题立即切分（软限制）
-    multipage_sections=True        # 是否允许块跨越页面（对 Markdown 而言通常设为 True）
+# 配置切分参数
+text_splitter = RecursiveCharacterTextSplitter(
+    chunk_size=1000,       # 每个 chunk 的字符数
+    chunk_overlap=100,     # chunk 之间的重叠字符数
+    length_function=len,
+    is_separator_regex=False,
 )
 
-# 3. 分块处理
-current_path = {1: "", 2: "", 3: ""}
-documents = []
+# 执行切分
+chunked_documents = text_splitter.split_documents(documents)
 
-class DocumentWrapper:
-    def __init__(self, content, metadata):
-        self.page_content = content
-        self.metadata = metadata
-        
-for i, chunk in enumerate(chunks):
-    for el in chunk.metadata.orig_elements:
-        if el.category == "Title":
-            # 获取当前标题层级 (category_depth: 0=H1, 1=H2...)
-            depth = getattr(el.metadata, "category_depth", 0) + 1
-            current_path[depth] = el.text
-            # 当 H2 更新时，清空 H3, H4
-            for i in range(depth + 1, 3):
-                current_path[i] = ""
+print(f"切分完成：从 {len(documents)} 个原始文档生成了 {len(chunked_documents)} 个 Chunks")
 
-    # 构建完整路径字符串: "章 > 节 > 小节"
-    if len(current_path) > 0:
-        breadcrumb = " ".join([v for v in current_path.values() if v][:-1])
-    else:
-        breadcrumb = ''
-        
-    documents.append(DocumentWrapper(f"{breadcrumb} {" ".join(chunk.text.split())}\n", {
-        "filename": in_path, "page_num": i
-    }))
-
-print(f"Chunk Num: {i}")
+# 将后续使用的 documents 变量更新为切分后的版本
+# 注意：这会影响后续 KnowledgeGraph 的构建
+documents = chunked_documents
 
 # %% [markdown]
 # ## 2. 评测集准备
 # ### 2.1. 初始化 LLM
 
 # %%
+"""
 from ragas.cache import DiskCacheBackend
 
 # 1. 开启本地磁盘缓存
@@ -129,6 +115,7 @@ from ragas.embeddings import LangchainEmbeddingsWrapper
 from ragas.llms import LangchainLLMWrapper
 generator_llm = LangchainLLMWrapper(gemini_llm, cache=cache)
 embeddings = LangchainEmbeddingsWrapper(gemini_embeddings, cache=cache)
+"""
 
 # %%
 from ragas.cache import DiskCacheBackend
@@ -200,9 +187,6 @@ embeddings = embedding_factory(provider="google", model=embedding_model, client=
 
 # %% [markdown]
 # ### 2.2. 生成评测集
-
-# %%
-await generator_llm.agenerate_text("hi")
 
 # %%
 from ragas.run_config import RunConfig
@@ -283,7 +267,6 @@ kg.save(kg_path)
 # #### 2.2.2. 生成评测集
 
 # %%
-# %%viztracer
 from ragas.testset import TestsetGenerator
 
 # 2. 初始化生成器 (此时它已拥有所有向量和实体信息)
@@ -303,8 +286,8 @@ query_distribution = [
 testset = generator.generate(
     testset_size=testset_size,
     query_distribution=query_distribution,
-    # run_config=run_config
-    with_debugging_logs=True
+    run_config=run_config
+    # with_debugging_logs=True
 )
 
 df = testset.to_pandas()
@@ -594,9 +577,9 @@ async def run_evaluation():
     experiment_results: Experiment = await run_experiment.arun(dataset)
     #logging.info(f"Experiment completed successfully! Total: {time.time() - start:.2f}s")
     # Save experiment results to CSV
-    #experiment_results.save()
-    #jsonl_path: Path = Path("./ragas_data") / "experiments" / f"{experiment_results.name}.jsonl"
-    #logging.info(f"\nExperiment results saved to: {jsonl_path.resolve()}")
+    experiment_results.save()
+    jsonl_path: Path = Path("./ragas_data") / "experiments" / f"{experiment_results.name}.jsonl"
+    logging.info(f"\nExperiment results saved to: {jsonl_path.resolve()}")
 
     # Print results
     # if experiment_results:
@@ -612,65 +595,5 @@ async def run_evaluation():
 # %%viztracer
 import asyncio
 asyncio.run(run_evaluation())
-
-
-# %%
-# %%viztracer
-async def fetch_data():
-    await asyncio.sleep(0.005)  # 模拟I/O操作
-    return 1
-async def process_data():
-    result = await fetch_data()
-    print(f"处理结果: {result}")
-
-asyncio.run(asyncio.gather(*[process_data() for _ in range(10)]))
-
-
-# %%
-# %%viztracer
-
-async def process_data():
-    result = await fetch_data()
-    result1 = await fetch_data2()
-async def fetch_data():
-    await asyncio.sleep(0.0001)  # 模拟I/O操作
-    return 1
-async def fetch_data2():
-    await asyncio.sleep(0.0002)  # 模拟I/O操作
-    return 2
-
-asyncio.run(process_data())
-
-
-# %%
-async def foo():
-    print("A")
-    x = await bar()
-    print("B", x)
-    return x + 1
-
-x = foo()
-
-# %%
-print(x.cr_code)
-
-# %%
-import dis
-dis.dis(x.cr_code)
-
-
-# %%
-async def foo():
-    print("A")
-    x = await bar()
-    print("B", x)
-    x = await ba()
-    return x + 1
-
-x = foo()
-
-# %%
-import dis
-dis.dis(x.cr_code)
 
 # %%
