@@ -1,6 +1,7 @@
 # ---
 # jupyter:
 #   jupytext:
+#     formats: ipynb,py:percent
 #     text_representation:
 #       extension: .py
 #       format_name: percent
@@ -362,54 +363,63 @@ answer：
         """
 
     def query(self, user_input: str):
-        
-        response = self.client.models.generate_content(
-            model="gemini-2.5-flash",
-            config={"response_mime_type": "application/json"},
-            contents=self.system_prompt.format(user_input=user_input)
-        )
-
-        import json
-        result = json.loads(response.text.strip())
-
-        return {
-            "answer": result["answer"]
-        }
-
-
-    async def aquery_manual(self, user_input: str):
-        # 使用 asyncio.to_thread 在线程中执行同步调用
-        loop = asyncio.get_event_loop()
-        response = await loop.run_in_executor(
-            None,
-            lambda: self.client.models.generate_content(
-                model="gemini-2.5-flash",
+        try:
+            response = self.client.models.generate_content(
+                model="gemini-2.0-flash",
                 config={"response_mime_type": "application/json"},
                 contents=self.system_prompt.format(user_input=user_input)
             )
-        )
-        
-        import json
-        result = json.loads(response.text.strip())
-        return {
-            "answer": result["answer"]
-        }
+
+            import json
+            result = json.loads(response.text.strip())
+
+            return {
+                "answer": result.get("answer", "No answer found in response.")
+            }
+        except Exception as e:
+            return {"answer": f"Error: {str(e)}"}
+
+
+    async def aquery_manual(self, user_input: str):
+        try:
+            # 使用 asyncio.to_thread 在线程中执行同步调用
+            loop = asyncio.get_event_loop()
+            response = await loop.run_in_executor(
+                None,
+                lambda: self.client.models.generate_content(
+                    model="gemini-2.0-flash",
+                    config={"response_mime_type": "application/json"},
+                    contents=self.system_prompt.format(user_input=user_input)
+                )
+            )
+            
+            import json
+            result = json.loads(response.text.strip())
+            return {
+                "answer": result.get("answer", "No answer found in response.")
+            }
+        except Exception as e:
+            return {"answer": f"Error: {str(e)}"}
 
     async def aquery(self, user_input: str):
-        # 使用 asyncio.to_thread 在线程中执行同步调用
-        response = await self.client.aio.models.generate_content(
-            model="gemini-2.5-flash",
-            config={"response_mime_type": "application/json"},
-            contents=self.system_prompt.format(user_input=user_input)
-        )
-        
-        import json
-        result = json.loads(response.text.strip())
-        return {
-            "answer": result["answer"]
-        }
+        try:
+            # 使用 aio client 执行异步调用
+            response = await self.client.aio.models.generate_content(
+                model="gemini-2.0-flash",
+                config={"response_mime_type": "application/json"},
+                contents=self.system_prompt.format(user_input=user_input)
+            )
+            
+            import json
+            result = json.loads(response.text.strip())
+            return {
+                "answer": result.get("answer", "No answer found in response.")
+            }
+        except Exception as e:
+            return {"answer": f"Error during aquery: {str(e)}"}
 
 rag_client = SimpleAgent(client)
+
 
 # %%
 dataset = Dataset.load(name="维度建模", backend="local/jsonl", root_dir="./ragas_data")
@@ -491,18 +501,6 @@ async def correctness_metric(user_input: str, reference: str, prediction: str):
     reference = str(reference).strip()
 
     try:
-        """
-        loop = asyncio.get_event_loop()
-        response = await loop.run_in_executor(
-            None,
-            lambda: client.models.generate_content(
-                model="gemini-2.5-pro",
-                config={"response_mime_type": "application/json"},
-                contents=ANSWER_CORRECTNESS_PROMPT_SIMPLE.format(user_input=user_input, reference=reference, prediction=prediction)
-            )
-        )
-        """
-
         response = await client.aio.models.generate_content(
             model="gemini-2.5-pro",
             config={"response_mime_type": "application/json"},
