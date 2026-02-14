@@ -359,15 +359,62 @@ import asyncio
 import json
 import logging
 import tenacity
+import re
 from google.genai import errors
 
-# 配置重试逻辑：指数退避，最多重试 5 次
-# 针对 429 (速率限制) 和 503 (服务不可用) 以及对应的异常类型进行重试
+# 配置日志
+logging.basicConfig(level=logging.INFO)
+logger = logging.getLogger(__name__)
+
 def is_retryable_error(exception):
-    msg = str(exception)
-    return (isinstance(exception, (errors.ClientError, errors.ServerError)) or 
-            "429" in msg or 
-            "503" in msg)
+    """
+    判断异常是否应该重试：
+    1. 包含 429 (速率限制) 或 503 (服务不可用) 的错误信息
+    2. SDK 明确定义的客户端/服务器错误
+    3. 解析异常 (有时候重试可能得到正确的格式)
+    """
+    msg = str(exception).lower()
+    if "429" in msg or "503" in msg or "quota" in msg or "rate limit" in msg:
+        return True
+    if isinstance(exception, (errors.ClientError, errors.ServerError)):
+        return True
+    # 如果是 JSON 解析错误，也可以尝试重试，因为模型输出具有随机性
+    if isinstance(exception, (json.JSONDecodeError, ValueError)):
+        return True
+    return False
+
+def robust_json_parse(text: str):
+    """
+    鲁棒地解析 LLM 返回的 JSON 字符串，处理常见的 Markdown 标记。
+    """
+    if not text:
+        raise ValueError("Empty response from LLM")
+    
+    # 尝试直接解析
+    text_clean = text.strip()
+    try:
+        return json.loads(text_clean)
+    except json.JSONDecodeError:
+        pass
+    
+    # 尝试提取 ```json ... ``` 中的内容
+    match = re.search(r'```(?:json)?\s*([\s\S]*?)\s*```', text_clean)
+    if match:
+        try:
+            return json.loads(match.group(1))
+        except json.JSONDecodeError:
+            pass
+            
+    # 如果还是不行，尝试寻找第一个 { 和最后一个 }
+    start = text_clean.find('{')
+    end = text_clean.rfind('}')
+    if start != -1 and end != -1:
+        try:
+            return json.loads(text_clean[start:end+1])
+        except json.JSONDecodeError:
+            pass
+            
+    raise ValueError(f"Failed to parse JSON from LLM output: {text[:100]}...")
 
 class SimpleAgent:
     def __init__(self, client, system_prompt: str=None):
@@ -389,10 +436,10 @@ answer：
         """
 
     @tenacity.retry(
-        wait=tenacity.wait_exponential(multiplier=1, min=2, max=10),
+        wait=tenacity.wait_exponential(multiplier=1, min=2, max=30),
         stop=tenacity.stop_after_attempt(5),
         retry=tenacity.retry_if_exception(is_retryable_error),
-        before_sleep=tenacity.before_sleep_log(logging.getLogger(__name__), logging.INFO),
+        before_sleep=tenacity.before_sleep_log(logger, logging.INFO),
         reraise=True
     )
     def query(self, user_input: str):
@@ -403,44 +450,18 @@ answer：
                 contents=self.system_prompt.format(user_input=user_input)
             )
 
-            result = json.loads(response.text.strip())
+            result = robust_json_parse(response.text)
             return {
                 "answer": result.get("answer", "No answer found in response.")
             }
         except Exception as e:
             if is_retryable_error(e):
                  raise e
+            logger.error(f"Non-retryable error in query: {e}")
             return {"answer": f"Error: {str(e)}"}
 
     @tenacity.retry(
-        wait=tenacity.wait_exponential(multiplier=1, min=2, max=10),
-        stop=tenacity.stop_after_attempt(5),
-        retry=tenacity.retry_if_exception(is_retryable_error),
-        reraise=True
-    )
-    async def aquery_manual(self, user_input: str):
-        try:
-            loop = asyncio.get_event_loop()
-            response = await loop.run_in_executor(
-                None,
-                lambda: self.client.models.generate_content(
-                    model="gemini-2.0-flash",
-                    config={"response_mime_type": "application/json"},
-                    contents=self.system_prompt.format(user_input=user_input)
-                )
-            )
-            
-            result = json.loads(response.text.strip())
-            return {
-                "answer": result.get("answer", "No answer found in response.")
-            }
-        except Exception as e:
-            if is_retryable_error(e):
-                raise e
-            return {"answer": f"Error: {str(e)}"}
-
-    @tenacity.retry(
-        wait=tenacity.wait_exponential(multiplier=1, min=2, max=10),
+        wait=tenacity.wait_exponential(multiplier=1, min=2, max=30),
         stop=tenacity.stop_after_attempt(5),
         retry=tenacity.retry_if_exception(is_retryable_error),
         reraise=True
@@ -453,13 +474,14 @@ answer：
                 contents=self.system_prompt.format(user_input=user_input)
             )
             
-            result = json.loads(response.text.strip())
+            result = robust_json_parse(response.text)
             return {
                 "answer": result.get("answer", "No answer found in response.")
             }
         except Exception as e:
             if is_retryable_error(e):
                 raise e
+            logger.error(f"Non-retryable error in aquery: {e}")
             return {"answer": f"Error during aquery: {str(e)}"}
 
 rag_client = SimpleAgent(client)
@@ -507,14 +529,12 @@ from ragas.metrics import numeric_metric
 from ragas.metrics.result import MetricResult
 import tenacity
 import json
+import logging
 from google.genai import errors
 
-# 定义重试判断函数
-def is_retryable_error(exception):
-    msg = str(exception)
-    return (isinstance(exception, (errors.ClientError, errors.ServerError)) or 
-            "429" in msg or 
-            "503" in msg)
+logger = logging.getLogger(__name__)
+
+# 注意：is_retryable_error 和 robust_json_parse 已在之前的 Cell 中定义
 
 @numeric_metric(name="correctness", allowed_values=(0.0, 5.0))
 def correctness_metric_sync(user_input: str, reference: str, prediction: str):
@@ -527,9 +547,10 @@ def correctness_metric_sync(user_input: str, reference: str, prediction: str):
 
     # 封装带重试的内部调用
     @tenacity.retry(
-        wait=tenacity.wait_exponential(multiplier=1, min=2, max=10),
+        wait=tenacity.wait_exponential(multiplier=1, min=2, max=30),
         stop=tenacity.stop_after_attempt(5),
         retry=tenacity.retry_if_exception(is_retryable_error),
+        before_sleep=tenacity.before_sleep_log(logger, logging.INFO),
         reraise=True
     )
     def _call_llm():
@@ -541,7 +562,7 @@ def correctness_metric_sync(user_input: str, reference: str, prediction: str):
 
     try:
         response = _call_llm()
-        judge_result = json.loads(response.text.strip())
+        judge_result = robust_json_parse(response.text)
         result = float(judge_result["score"])
         reason = judge_result["reasoning"]
         
@@ -549,6 +570,7 @@ def correctness_metric_sync(user_input: str, reference: str, prediction: str):
         # 重试多次失败后的最终回退
         result = 1.0 if prediction.lower() == reference.lower() else 0.0
         reason = f"LLM 评分失败（已重试）: {str(e)}"
+        logger.warning(reason)
     
     return MetricResult(value=result, reason=reason)
 
@@ -564,9 +586,10 @@ async def correctness_metric(user_input: str, reference: str, prediction: str):
 
     # 封装带重试的异步内部调用
     @tenacity.retry(
-        wait=tenacity.wait_exponential(multiplier=1, min=2, max=10),
+        wait=tenacity.wait_exponential(multiplier=1, min=2, max=30),
         stop=tenacity.stop_after_attempt(5),
         retry=tenacity.retry_if_exception(is_retryable_error),
+        before_sleep=tenacity.before_sleep_log(logger, logging.INFO),
         reraise=True
     )
     async def _acall_llm():
@@ -578,7 +601,7 @@ async def correctness_metric(user_input: str, reference: str, prediction: str):
 
     try:
         response = await _acall_llm()
-        judge_result = json.loads(response.text.strip())
+        judge_result = robust_json_parse(response.text)
         result = float(judge_result["score"])
         reason = judge_result["reasoning"]
         
@@ -586,6 +609,7 @@ async def correctness_metric(user_input: str, reference: str, prediction: str):
         # 重试多次失败后的最终回退
         result = 1.0 if prediction.lower() == reference.lower() else 0.0
         reason = f"LLM 评分失败（已重试）: {str(e)}"
+        logger.warning(reason)
     
     return MetricResult(value=result, reason=reason)
 
