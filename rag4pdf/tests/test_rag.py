@@ -66,3 +66,30 @@ def test_retriever_ranking():
     # index 0: "Ragas are melodic frameworks in Indian classical music."
     assert top_docs[0][0] == 0
     assert top_docs[0][1] >= 2  # At least 2 matches
+
+
+def test_retriever_jieba():
+    """Test that the jieba tokenizer correctly handles Chinese text"""
+    # Try to import jieba to see if it's available for testing
+    try:
+        import jieba
+    except ImportError:
+        pytest.skip("jieba not installed, skipping jieba test")
+
+    documents = [
+        "人工智能是未来的核心技术。",
+        "深度学习是人工智能的一个子集。",
+        "自然语言处理让机器理解人类语言。",
+    ]
+    retriever = SimpleKeywordRetriever(tokenizer="jieba")
+    retriever.fit(documents)
+
+    # "人工智能" should match the first two documents
+    query = "人工智能技术"
+    top_docs = retriever.get_top_k(query, k=2)
+
+    assert top_docs[0][0] in [0, 1]
+    assert top_docs[1][0] in [0, 1]
+    # In doc 0, "人工智能" and "技术" are separate tokens in jieba usually
+    # In doc 1, "人工智能" matches
+    assert top_docs[0][1] >= 1

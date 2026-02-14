@@ -27,13 +27,28 @@ class BaseRetriever:
 class SimpleKeywordRetriever(BaseRetriever):
     """Ultra-simple keyword matching retriever"""
 
-    def __init__(self):
+    def __init__(self, tokenizer: str = "split"):
         super().__init__()
+        self.tokenizer = tokenizer
+
+    def _tokenize(self, text: str) -> List[str]:
+        """Tokenize text according to selected tokenizer"""
+        if self.tokenizer == "jieba":
+            try:
+                import jieba
+
+                return list(jieba.cut(text.lower()))
+            except ImportError:
+                import warnings
+
+                warnings.warn("jieba not installed, falling back to split tokenizer")
+                return text.lower().split()
+        return text.lower().split()
 
     def _count_keyword_matches(self, query: str, document: str) -> int:
         """Count how many query words appear in the document"""
-        query_words = query.lower().split()
-        document_words = document.lower().split()
+        query_words = self._tokenize(query)
+        document_words = self._tokenize(document)
         matches = 0
         for word in query_words:
             if word in document_words:
@@ -210,7 +225,9 @@ class SimpleRAG:
             }
 
 
-def default_rag_client(llm_client, model_name: str = "gemini-2.5-pro", documents: Optional[List[str]] = None) -> SimpleRAG:
+def default_rag_client(
+    llm_client, model_name: str = "gemini-2.5-pro", documents: Optional[List[str]] = None, tokenizer: str = "split"
+) -> SimpleRAG:
     """
     Create a default RAG client with OpenAI LLM and optional retriever.
 
@@ -218,10 +235,11 @@ def default_rag_client(llm_client, model_name: str = "gemini-2.5-pro", documents
         llm_client: LLM client with a generate() method
         model_name: Default model to use for generation
         documents: Optional list of documents to add
+        tokenizer: Tokenizer to use for keyword matching ("split" or "jieba")
     Returns:
         ExampleRAG instance
     """
-    retriever = SimpleKeywordRetriever()
+    retriever = SimpleKeywordRetriever(tokenizer=tokenizer)
     client = SimpleRAG(llm_client=llm_client, retriever=retriever, model_name=model_name)
     if documents:
         client.add_documents(documents)
