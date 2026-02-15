@@ -17,7 +17,7 @@
 # # Simple Rag
 
 # %%
-# %load_ext viztracer
+# %reload_ext viztracer
 
 # %%
 import os
@@ -361,130 +361,20 @@ import logging
 import tenacity
 import re
 from google.genai import errors
+from rag import SimpleRAG, robust_json_parse, is_retryable_error
 
 # 配置日志
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
-def is_retryable_error(exception):
-    """
-    判断异常是否应该重试：
-    1. 包含 429 (速率限制) 或 503 (服务不可用) 的错误信息
-    2. SDK 明确定义的客户端/服务器错误
-    3. 解析异常 (有时候重试可能得到正确的格式)
-    """
-    msg = str(exception).lower()
-    if "429" in msg or "503" in msg or "quota" in msg or "rate limit" in msg:
-        return True
-    if isinstance(exception, (errors.ClientError, errors.ServerError)):
-        return True
-    # 如果是 JSON 解析错误，也可以尝试重试，因为模型输出具有随机性
-    if isinstance(exception, (json.JSONDecodeError, ValueError)):
-        return True
-    return False
+# 初始化 SimpleRAG，指定使用 gemini-2.0-flash
+rag_client = SimpleRAG(llm_client=client, model_name="gemini-2.0-flash")
 
-def robust_json_parse(text: str):
-    """
-    鲁棒地解析 LLM 返回的 JSON 字符串，处理常见的 Markdown 标记。
-    """
-    if not text:
-        raise ValueError("Empty response from LLM")
-    
-    # 尝试直接解析
-    text_clean = text.strip()
-    try:
-        return json.loads(text_clean)
-    except json.JSONDecodeError:
-        pass
-    
-    # 尝试提取 ```json ... ``` 中的内容
-    match = re.search(r'```(?:json)?\s*([\s\S]*?)\s*```', text_clean)
-    if match:
-        try:
-            return json.loads(match.group(1))
-        except json.JSONDecodeError:
-            pass
-            
-    # 如果还是不行，尝试寻找第一个 { 和最后一个 }
-    start = text_clean.find('{')
-    end = text_clean.rfind('}')
-    if start != -1 and end != -1:
-        try:
-            return json.loads(text_clean[start:end+1])
-        except json.JSONDecodeError:
-            pass
-            
-    raise ValueError(f"Failed to parse JSON from LLM output: {text[:100]}...")
+# 将笔记本中之前切分好的文档内容加载到 RAG 中
+# 注意：documents 变量中存储的是 Langchain 的 Document 对象，需要提取 page_content
+rag_client.add_documents([doc.page_content for doc in documents])
 
-class SimpleAgent:
-    def __init__(self, client, system_prompt: str=None):
-        self.client = client
-        self.system_prompt = system_prompt or """回答如下问题：
-problem：{user_input}
-answer：
-
-请使用中文回答 (Please respond in Chinese).
-
-
-输出格式：
-
-```json
-{{
-  "answer": 答案
-}}
-```
-        """
-
-    @tenacity.retry(
-        wait=tenacity.wait_exponential(multiplier=1, min=2, max=30),
-        stop=tenacity.stop_after_attempt(5),
-        retry=tenacity.retry_if_exception(is_retryable_error),
-        before_sleep=tenacity.before_sleep_log(logger, logging.INFO),
-        reraise=True
-    )
-    def query(self, user_input: str):
-        try:
-            response = self.client.models.generate_content(
-                model="gemini-2.0-flash",
-                config={"response_mime_type": "application/json"},
-                contents=self.system_prompt.format(user_input=user_input)
-            )
-
-            result = robust_json_parse(response.text)
-            return {
-                "answer": result.get("answer", "No answer found in response.")
-            }
-        except Exception as e:
-            if is_retryable_error(e):
-                 raise e
-            logger.error(f"Non-retryable error in query: {e}")
-            return {"answer": f"Error: {str(e)}"}
-
-    @tenacity.retry(
-        wait=tenacity.wait_exponential(multiplier=1, min=2, max=30),
-        stop=tenacity.stop_after_attempt(5),
-        retry=tenacity.retry_if_exception(is_retryable_error),
-        reraise=True
-    )
-    async def aquery(self, user_input: str):
-        try:
-            response = await self.client.aio.models.generate_content(
-                model="gemini-2.0-flash",
-                config={"response_mime_type": "application/json"},
-                contents=self.system_prompt.format(user_input=user_input)
-            )
-            
-            result = robust_json_parse(response.text)
-            return {
-                "answer": result.get("answer", "No answer found in response.")
-            }
-        except Exception as e:
-            if is_retryable_error(e):
-                raise e
-            logger.error(f"Non-retryable error in aquery: {e}")
-            return {"answer": f"Error during aquery: {str(e)}"}
-
-rag_client = SimpleAgent(client)
+print(f"SimpleRAG 初始化完成，已加载 {len(documents)} 个文档切片")
 
 
 # %%
@@ -531,10 +421,11 @@ import tenacity
 import json
 import logging
 from google.genai import errors
+from rag import is_retryable_error, robust_json_parse
 
 logger = logging.getLogger(__name__)
 
-# 注意：is_retryable_error 和 robust_json_parse 已在之前的 Cell 中定义
+# 注意：is_retryable_error 和 robust_json_parse 已从 rag.py 导入
 
 @numeric_metric(name="correctness", allowed_values=(0.0, 5.0))
 def correctness_metric_sync(user_input: str, reference: str, prediction: str):
@@ -688,7 +579,7 @@ async def run_evaluation():
 # %%
 # # %%viztracer
 import asyncio
-experiment_results = asyncio.run(run_evaluation())
+experiment_results = await run_evaluation()
 
 # %%
 experiment_results.to_pandas()
