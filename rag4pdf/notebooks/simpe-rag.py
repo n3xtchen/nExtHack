@@ -350,7 +350,7 @@ dataset.to_pandas()
 
 # %%
 from google import genai
-from rag import default_rag_client
+from rag4pdf.rag import default_rag_client
 api_key = os.environ["GOOGLE_API_KEY"]
 client = genai.Client(api_key=api_key)
 
@@ -361,7 +361,7 @@ import logging
 import tenacity
 import re
 from google.genai import errors
-from rag import SimpleRAG, robust_json_parse, is_retryable_error
+from rag4pdf.rag import SimpleRAG, robust_json_parse, is_retryable_error
 
 # 配置日志
 logging.basicConfig(level=logging.INFO)
@@ -469,7 +469,7 @@ import tenacity
 import json
 import logging
 from google.genai import errors
-from rag import is_retryable_error, robust_json_parse
+from rag4pdf.rag import is_retryable_error, robust_json_parse
 
 logger = logging.getLogger(__name__)
 

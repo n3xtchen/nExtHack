@@ -3046,79 +3046,6 @@ wheels = [
 ]
 
 [[package]]
-name = "pdf-converter"
-version = "0.1.0"
-source = { virtual = "." }
-dependencies = [
-    { name = "google-genai" },
-    { name = "html2text" },
-    { name = "jieba" },
-    { name = "jsonref" },
-    { name = "jupytext" },
-    { name = "langchain-google-genai" },
-    { name = "matplotlib" },
-    { name = "paddlenlp" },
-    { name = "paddleocr" },
-    { name = "pillow" },
-    { name = "pymupdf" },
-    { name = "python-multipart" },
-    { name = "ragas" },
-    { name = "torch" },
-    { name = "unstructured", extra = ["md", "pdf"] },
-]
-
-[package.dev-dependencies]
-dev = [
-    { name = "black" },
-    { name = "flake8" },
-    { name = "httpx", extra = ["socks"] },
-    { name = "ipykernel" },
-    { name = "ipywidgets" },
-    { name = "isort" },
-    { name = "mypy" },
-    { name = "pre-commit" },
-    { name = "pytest" },
-    { name = "pytest-cov" },
-    { name = "python-dotenv" },
-    { name = "viztracer" },
-]
-
-[package.metadata]
-requires-dist = [
-    { name = "google-genai", specifier = ">=1.61.0" },
-    { name = "html2text", specifier = ">=2025.4.15" },
-    { name = "jieba", specifier = ">=0.42.1" },
-    { name = "jsonref", specifier = ">=1.1.0" },
-    { name = "jupytext", specifier = ">=1.19.1" },
-    { name = "langchain-google-genai", specifier = ">=4.2.0" },
-    { name = "matplotlib", specifier = ">=3.10.8" },
-    { name = "paddlenlp", specifier = ">=2.5.2" },
-    { name = "paddleocr", specifier = ">=3.3.3" },
-    { name = "pillow", specifier = ">=12.1.0" },
-    { name = "pymupdf", specifier = ">=1.26.7" },
-    { name = "python-multipart", specifier = ">=0.0.22" },
-    { name = "ragas", specifier = ">=0.4.3" },
-    { name = "torch", specifier = ">=2.10.0" },
-    { name = "unstructured", extras = ["md", "pdf"], specifier = ">=0.18.27" },
-]
-
-[package.metadata.requires-dev]
-dev = [
-    { name = "black", specifier = ">=24.9.1" },
-    { name = "flake8", specifier = ">=6.1.0" },
-    { name = "httpx", extras = ["socks"], specifier = ">=0.28.1" },
-    { name = "ipykernel" },
-    { name = "ipywidgets", specifier = ">=8.1.8" },
-    { name = "isort", specifier = ">=5.12.0" },
-    { name = "mypy", specifier = ">=1.3.0" },
-    { name = "pre-commit", specifier = ">=3.4.0" },
-    { name = "pytest", specifier = ">=7.4.0" },
-    { name = "pytest-cov", specifier = ">=4.1.0" },
-    { name = "python-dotenv", specifier = ">=1.2.1" },
-    { name = "viztracer", specifier = ">=1.1.1" },
-]
-
-[[package]]
 name = "pdf2image"
 version = "1.17.0"
 source = { registry = "https://pypi.org/simple" }
@@ -4020,6 +3947,79 @@ wheels = [
     { url = "https://files.pythonhosted.org/packages/c4/59/a5f38970f9bf07cee96128de79590bb354917914a9be11272cfc7ff26af0/pyzmq-27.1.0-cp314-cp314t-win32.whl", hash = "sha256:1f0b2a577fd770aa6f053211a55d1c47901f4d537389a034c690291485e5fe92", size = 587472, upload-time = "2025-09-08T23:08:58.18Z" },
     { url = "https://files.pythonhosted.org/packages/70/d8/78b1bad170f93fcf5e3536e70e8fadac55030002275c9a29e8f5719185de/pyzmq-27.1.0-cp314-cp314t-win_amd64.whl", hash = "sha256:19c9468ae0437f8074af379e986c5d3d7d7bfe033506af442e8c879732bedbe0", size = 661401, upload-time = "2025-09-08T23:08:59.802Z" },
     { url = "https://files.pythonhosted.org/packages/81/d6/4bfbb40c9a0b42fc53c7cf442f6385db70b40f74a783130c5d0a5aa62228/pyzmq-27.1.0-cp314-cp314t-win_arm64.whl", hash = "sha256:dc5dbf68a7857b59473f7df42650c621d7e8923fb03fa74a526890f4d33cc4d7", size = 575170, upload-time = "2025-09-08T23:09:01.418Z" },
+]
+
+[[package]]
+name = "rag4pdf"
+version = "0.1.0"
+source = { virtual = "." }
+dependencies = [
+    { name = "google-genai" },
+    { name = "html2text" },
+    { name = "jieba" },
+    { name = "jsonref" },
+    { name = "jupytext" },
+    { name = "langchain-google-genai" },
+    { name = "matplotlib" },
+    { name = "paddlenlp" },
+    { name = "paddleocr" },
+    { name = "pillow" },
+    { name = "pymupdf" },
+    { name = "python-multipart" },
+    { name = "ragas" },
+    { name = "torch" },
+    { name = "unstructured", extra = ["md", "pdf"] },
+]
+
+[package.dev-dependencies]
+dev = [
+    { name = "black" },
+    { name = "flake8" },
+    { name = "httpx", extra = ["socks"] },
+    { name = "ipykernel" },
+    { name = "ipywidgets" },
+    { name = "isort" },
+    { name = "mypy" },
+    { name = "pre-commit" },
+    { name = "pytest" },
+    { name = "pytest-cov" },
+    { name = "python-dotenv" },
+    { name = "viztracer" },
+]
+
+[package.metadata]
+requires-dist = [
+    { name = "google-genai", specifier = ">=1.61.0" },
+    { name = "html2text", specifier = ">=2025.4.15" },
+    { name = "jieba", specifier = ">=0.42.1" },
+    { name = "jsonref", specifier = ">=1.1.0" },
+    { name = "jupytext", specifier = ">=1.19.1" },
+    { name = "langchain-google-genai", specifier = ">=4.2.0" },
+    { name = "matplotlib", specifier = ">=3.10.8" },
+    { name = "paddlenlp", specifier = ">=2.5.2" },
+    { name = "paddleocr", specifier = ">=3.3.3" },
+    { name = "pillow", specifier = ">=12.1.0" },
+    { name = "pymupdf", specifier = ">=1.26.7" },
+    { name = "python-multipart", specifier = ">=0.0.22" },
+    { name = "ragas", specifier = ">=0.4.3" },
+    { name = "torch", specifier = ">=2.10.0" },
+    { name = "unstructured", extras = ["md", "pdf"], specifier = ">=0.18.27" },
+]
+
+[package.metadata.requires-dev]
+dev = [
+    { name = "black", specifier = ">=24.9.1" },
+    { name = "flake8", specifier = ">=6.1.0" },
+    { name = "httpx", extras = ["socks"], specifier = ">=0.28.1" },
+    { name = "ipykernel" },
+    { name = "ipywidgets", specifier = ">=8.1.8" },
+    { name = "isort", specifier = ">=5.12.0" },
+    { name = "mypy", specifier = ">=1.3.0" },
+    { name = "pre-commit", specifier = ">=3.4.0" },
+    { name = "pytest", specifier = ">=7.4.0" },
+    { name = "pytest-cov", specifier = ">=4.1.0" },
+    { name = "python-dotenv", specifier = ">=1.2.1" },
+    { name = "viztracer", specifier = ">=1.1.1" },
 ]
 
 [[package]]

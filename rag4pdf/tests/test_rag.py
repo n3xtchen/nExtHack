@@ -1,6 +1,6 @@
 import pytest
 from unittest.mock import MagicMock
-from rag import SimpleRAG, SimpleKeywordRetriever
+from rag4pdf.rag import SimpleRAG, SimpleKeywordRetriever
 
 DOCUMENTS = [
     "Ragas are melodic frameworks in Indian classical music.",
