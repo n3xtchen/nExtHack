@@ -24,7 +24,7 @@ import os
 from pathlib import Path
 
 # 替换为你的代理端口，通常是 7890, 7897, 1080 等
-proxy = None # "http://127.0.0.1:7890" 
+proxy = "http://127.0.0.1:7890" 
 
 if proxy:
     os.environ["http_proxy"] = proxy
@@ -368,7 +368,7 @@ logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
 # 初始化 SimpleRAG，指定使用 gemini-2.0-flash
-rag_client = SimpleRAG(llm_client=client, model_name="gemini-2.0-flash")
+rag_client = default_rag_client(llm_client=client, model_name="gemini-2.0-flash", tokenizer="jieba")
 
 # 将笔记本中之前切分好的文档内容加载到 RAG 中
 # 注意：documents 变量中存储的是 Langchain 的 Document 对象，需要提取 page_content
@@ -413,6 +413,31 @@ ANSWER_CORRECTNESS_PROMPT_SIMPLE = """评估生成答案相对于参考答案的
 }}
 ```
 """
+
+FAITHFULNESS_PROMPT = """评估生成的答案是否完全由提供的上下文（检索到的文档）支持。
+
+**上下文**：
+{context}
+
+**生成的答案**：
+{prediction}
+
+**评估要求**：
+1. 检查答案中的每个陈述是否都能在上下文中找到依据。
+2. 如果答案包含上下文之外的信息（即使在现实中是正确的），则在“支持度”评分中应予以扣分，因为这可能暗示了模型幻觉或未对齐。
+3. 给出 0-5 分数（5=完全由上下文支持，0=与上下文无关或完全是幻觉）和理由。
+
+请使用中文回答 (Please respond in Chinese).
+
+输出格式：
+```json
+{{
+  "score": <分数>,
+  "reasoning": "<理由>"
+}}
+```
+"""
+
 
 # %%
 from ragas.metrics import numeric_metric
@@ -504,6 +529,43 @@ async def correctness_metric(user_input: str, reference: str, prediction: str):
     
     return MetricResult(value=result, reason=reason)
 
+@numeric_metric(name="faithfulness", allowed_values=(0.0, 5.0))
+async def faithfulness_metric(context: str, prediction: str):
+    """评估答案是否忠实于上下文，包含重试机制。"""
+    if not context:
+        return MetricResult(value=0.0, reason="无上下文可供对比")
+    
+    prediction = str(prediction).strip()
+    context = str(context).strip()
+
+    @tenacity.retry(
+        wait=tenacity.wait_exponential(multiplier=1, min=2, max=30),
+        stop=tenacity.stop_after_attempt(5),
+        retry=tenacity.retry_if_exception(is_retryable_error),
+        before_sleep=tenacity.before_sleep_log(logger, logging.INFO),
+        reraise=True
+    )
+    async def _acall_llm():
+        return await client.aio.models.generate_content(
+            model="gemini-2.0-flash",
+            config={"response_mime_type": "application/json"},
+            contents=FAITHFULNESS_PROMPT.format(context=context, prediction=prediction)
+        )
+
+    try:
+        response = await _acall_llm()
+        judge_result = robust_json_parse(response.text)
+        result = float(judge_result["score"])
+        reason = judge_result["reasoning"]
+        
+    except Exception as e:
+        result = 0.0
+        reason = f"Faithfulness LLM 评分失败: {str(e)}"
+        logger.warning(reason)
+    
+    return MetricResult(value=result, reason=reason)
+
+
 
 # %%
 dataset = Dataset.load(name="维度建模", backend="local/jsonl", root_dir="./ragas_data")
@@ -535,20 +597,29 @@ async def run_experiment(row):
     # start = time.time()
     
     response = await rag_client.aquery(user_input)
+    prediction = response["answer"]
+    retrieved_docs = response.get("retrieved_docs", [])
+    
+    # 提取召回结果作为 context
+    context = "\n\n".join([doc["content"] for doc in retrieved_docs])
 
-    # Calculate the correctness metric
-    # correctness = await correctness_metric.ascore(user_input=user_input, reference=reference, prediction=response["answer"])
-    correctness = correctness_metric.score(user_input=user_input, reference=reference, prediction=response["answer"])
+    # Calculate metrics
+    correctness = correctness_metric.score(user_input=user_input, reference=reference, prediction=prediction)
+    faithfulness = await faithfulness_metric.ascore(context=context, prediction=prediction)
 
-    # logging.debug(f"Correctness metric took: {time.time() - start:.2f}s {user_input}")
+    # logging.debug(f"Metrics calculation took: {time.time() - start:.2f}s {user_input}")
 
     return {
         "expression": user_input,
         "expected_result": reference,
-        "result": response["answer"],
+        "result": prediction,
+        "retrieved_docs": retrieved_docs,
         "correctness": correctness.value,
-        "reason": correctness.reason
+        "correctness_reason": correctness.reason,
+        "faithfulness": faithfulness.value,
+        "faithfulness_reason": faithfulness.reason
     }
+
 
 
 # %% [markdown]

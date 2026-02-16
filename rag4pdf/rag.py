@@ -222,7 +222,7 @@ class SimpleRAG:
     )
     def generate_response(
         self, query: str, top_k: int = 3, model_name: Optional[str] = None
-    ) -> str:
+    ) -> Dict[str, Any]:
         """
         Generate response to query using retrieved documents
 
@@ -232,7 +232,7 @@ class SimpleRAG:
             model_name: Optional model to use for this specific request
 
         Returns:
-            Generated response
+            Dictionary containing 'answer' and 'retrieved_docs'
         """
         if not self.is_fitted:
             raise ValueError(
@@ -243,7 +243,10 @@ class SimpleRAG:
         retrieved_docs = self.retrieve_documents(query, top_k)
 
         if not retrieved_docs:
-            return "I couldn't find any relevant documents to answer your question."
+            return {
+                "answer": "I couldn't find any relevant documents to answer your question.",
+                "retrieved_docs": []
+            }
 
         # Build context from retrieved documents
         context_parts = []
@@ -259,12 +262,18 @@ class SimpleRAG:
             response = self.llm_client.models.generate_content(
                 model=model_name or self.model_name, contents=prompt
             )
-            return response.text.strip()
+            return {
+                "answer": response.text.strip(),
+                "retrieved_docs": retrieved_docs
+            }
 
         except Exception as e:
             if is_retryable_error(e):
                 raise e
-            return f"Error generating response: {str(e)}"
+            return {
+                "answer": f"Error generating response: {str(e)}",
+                "retrieved_docs": retrieved_docs
+            }
 
     @tenacity.retry(
         wait=tenacity.wait_exponential(multiplier=1, min=2, max=30),
@@ -274,7 +283,7 @@ class SimpleRAG:
     )
     async def agenerate_response(
         self, query: str, top_k: int = 3, model_name: Optional[str] = None
-    ) -> str:
+    ) -> Dict[str, Any]:
         """
         Async version of generate_response
         """
@@ -287,7 +296,10 @@ class SimpleRAG:
         retrieved_docs = self.retrieve_documents(query, top_k)
 
         if not retrieved_docs:
-            return "I couldn't find any relevant documents to answer your question."
+            return {
+                "answer": "I couldn't find any relevant documents to answer your question.",
+                "retrieved_docs": []
+            }
 
         # Build context from retrieved documents
         context_parts = []
@@ -303,12 +315,18 @@ class SimpleRAG:
             response = await self.llm_client.aio.models.generate_content(
                 model=model_name or self.model_name, contents=prompt
             )
-            return response.text.strip()
+            return {
+                "answer": response.text.strip(),
+                "retrieved_docs": retrieved_docs
+            }
 
         except Exception as e:
             if is_retryable_error(e):
                 raise e
-            return f"Error generating response: {str(e)}"
+            return {
+                "answer": f"Error generating response: {str(e)}",
+                "retrieved_docs": retrieved_docs
+            }
 
     def query(
         self,
@@ -327,7 +345,7 @@ class SimpleRAG:
             model_name: Optional model to use for this specific request
 
         Returns:
-            Dictionary containing response and run_id
+            Dictionary containing response, retrieved_docs and run_id
         """
         # Generate run_id if not provided
         if run_id is None:
@@ -336,13 +354,18 @@ class SimpleRAG:
             )
 
         try:
-            response = self.generate_response(question, top_k, model_name=model_name)
-            return {"answer": response, "run_id": run_id}
+            result = self.generate_response(question, top_k, model_name=model_name)
+            return {
+                "answer": result["answer"],
+                "retrieved_docs": result["retrieved_docs"],
+                "run_id": run_id
+            }
 
         except Exception as e:
             # Return error result
             return {
                 "answer": f"Error processing query: {str(e)}",
+                "retrieved_docs": [],
                 "run_id": run_id,
             }
 
@@ -363,17 +386,23 @@ class SimpleRAG:
             )
 
         try:
-            response = await self.agenerate_response(
+            result = await self.agenerate_response(
                 question, top_k, model_name=model_name
             )
-            return {"answer": response, "run_id": run_id}
+            return {
+                "answer": result["answer"],
+                "retrieved_docs": result["retrieved_docs"],
+                "run_id": run_id
+            }
 
         except Exception as e:
             # Return error result
             return {
                 "answer": f"Error processing query: {str(e)}",
+                "retrieved_docs": [],
                 "run_id": run_id,
             }
+
 
 
 class SimpleAgent:
