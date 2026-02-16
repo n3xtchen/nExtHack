@@ -438,6 +438,29 @@ FAITHFULNESS_PROMPT = """评估生成的答案是否完全由提供的上下文�
 ```
 """
 
+ANSWER_RELEVANCE_PROMPT = """评估生成的答案与原始问题的相关性。
+
+**问题**：{user_input}
+
+**生成的答案**：{prediction}
+
+**评估要求**：
+1. 评估答案是否直接回答了问题。
+2. 检查答案是否包含冗余、无关或答非所问的信息。
+3. 即使答案在事实上是正确的，如果它没有直接针对问题，也应该给低分。
+4. 给出 0-5 分数（5=高度相关且直接，0=完全不相关或答非所问）和理由。
+
+请使用中文回答 (Please respond in Chinese).
+
+输出格式：
+```json
+{{
+  "score": <分数>,
+  "reasoning": "<理由>"
+}}
+```
+"""
+
 
 # %%
 from ragas.metrics import numeric_metric
@@ -565,6 +588,39 @@ async def faithfulness_metric(context: str, prediction: str):
     
     return MetricResult(value=result, reason=reason)
 
+@numeric_metric(name="answer_relevance", allowed_values=(0.0, 5.0))
+async def answer_relevance_metric(user_input: str, prediction: str):
+    """评估答案与问题的相关性，包含重试机制。"""
+    prediction = str(prediction).strip()
+    user_input = str(user_input).strip()
+
+    @tenacity.retry(
+        wait=tenacity.wait_exponential(multiplier=1, min=2, max=30),
+        stop=tenacity.stop_after_attempt(5),
+        retry=tenacity.retry_if_exception(is_retryable_error),
+        before_sleep=tenacity.before_sleep_log(logger, logging.INFO),
+        reraise=True
+    )
+    async def _acall_llm():
+        return await client.aio.models.generate_content(
+            model="gemini-2.0-flash",
+            config={"response_mime_type": "application/json"},
+            contents=ANSWER_RELEVANCE_PROMPT.format(user_input=user_input, prediction=prediction)
+        )
+
+    try:
+        response = await _acall_llm()
+        judge_result = robust_json_parse(response.text)
+        result = float(judge_result["score"])
+        reason = judge_result["reasoning"]
+        
+    except Exception as e:
+        result = 0.0
+        reason = f"Answer Relevance LLM 评分失败: {str(e)}"
+        logger.warning(reason)
+    
+    return MetricResult(value=result, reason=reason)
+
 
 
 # %%
@@ -606,6 +662,8 @@ async def run_experiment(row):
     # Calculate metrics
     correctness = correctness_metric.score(user_input=user_input, reference=reference, prediction=prediction)
     faithfulness = await faithfulness_metric.ascore(context=context, prediction=prediction)
+    # 计算答案相关性
+    answer_relevance = await answer_relevance_metric.ascore(user_input=user_input, prediction=prediction)
 
     # logging.debug(f"Metrics calculation took: {time.time() - start:.2f}s {user_input}")
 
@@ -617,7 +675,9 @@ async def run_experiment(row):
         "correctness": correctness.value,
         "correctness_reason": correctness.reason,
         "faithfulness": faithfulness.value,
-        "faithfulness_reason": faithfulness.reason
+        "faithfulness_reason": faithfulness.reason,
+        "answer_relevance": answer_relevance.value,
+        "answer_relevance_reason": answer_relevance.reason
     }
 
 
@@ -659,9 +719,22 @@ experiment_results.to_pandas()
 # Print results
 print(experiment_results)
 if experiment_results:
-    score = sum(result.get("correctness") or 0 for result in experiment_results)
     total_count = len(experiment_results)
-    correctness = round(score / total_count) if total_count > 0 else 0
-    print(f"Results: {correctness}/{total_count}")
+    
+    correctness_score = sum(result.get("correctness") or 0 for result in experiment_results)
+    correctness = round(correctness_score / total_count, 2) if total_count > 0 else 0
+    
+    relevance_score = sum(result.get("answer_relevance") or 0 for result in experiment_results)
+    relevance = round(relevance_score / total_count, 2) if total_count > 0 else 0
+    
+    faithfulness_score = sum(result.get("faithfulness") or 0 for result in experiment_results)
+    faithfulness = round(faithfulness_score / total_count, 2) if total_count > 0 else 0
+
+    print(f"\nEvaluation Results (Average Score):")
+    print(f"Correctness: {correctness}")
+    print(f"Answer Relevance: {relevance}")
+    print(f"Faithfulness: {faithfulness}")
+    print(f"Total samples: {total_count}")
+
 
 # %%
