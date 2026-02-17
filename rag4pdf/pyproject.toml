@@ -38,3 +38,13 @@ dev = [
     "ipywidgets>=8.1.8",
     "pytest-asyncio>=1.3.0",
 ]
+
+[tool.pyright]
+include = ["src", "tests"]
+exclude = ["**/__pycache__"]
+venvPath = "."
+venv = ".venv"
+extraPaths = ["src"]
+executionEnvironments = [
+  { root = "src" }
+]
