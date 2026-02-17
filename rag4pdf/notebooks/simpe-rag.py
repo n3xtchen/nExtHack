@@ -42,7 +42,7 @@ logging.basicConfig(level=logging.WARNING)
 
 # %%
 under_n_chars = 1000
-out_dir = "outputs"
+out_dir = "../outputs"
 book = "数据仓库工具箱维度建模权威指南（第3版）"
 chapter = "2" # 可以设为 "*" 来匹配所有章节
 book_fmt = "md"
@@ -122,81 +122,18 @@ embeddings = LangchainEmbeddingsWrapper(gemini_embeddings, cache=cache)
 from ragas.cache import DiskCacheBackend
 from ragas.embeddings.base import embedding_factory
 from ragas.llms import llm_factory
+from google import genai
+from rag4pdf import GoogleGenAIWrapper
 
 # 1. 开启本地磁盘缓存
-# 这会在当前目录下创建一个 .ragas_cache 文件夹
 cache = DiskCacheBackend()
 
 # 2. 初始化大模型客户端
-
-from google import genai
 client = genai.Client()
 
-import typing as t
-from langchain_core.outputs import Generation, LLMResult
-from ragas.run_config import RunConfig
-from ragas.cache import CacheInterface
-from ragas.llms import BaseRagasLLM
-class GoogleGenAIWrapper(BaseRagasLLM):
-    def __init__(self, 
-        client, 
-        model: str = "gemini-2.0-flash",
-        run_config: t.Optional[RunConfig] = None,
-        cache: t.Optional[CacheInterface] = None,
-        bypass_temperature: bool = False,
-        bypass_n: bool = False,
-    ):
-
-        super().__init__(cache=cache)
-        # 初始化同步 client，但只持有它的 aio 引用
-        self.client = client
-        self.model = model
-
-        if run_config is None:
-            run_config = RunConfig()
-        self.run_config = run_config
-        self.bypass_temperature: bool = bypass_temperature
-        self.bypass_n: bool = bypass_n
-
-    def generate_text(self, prompt: t.Any, **kwargs) -> LLMResult:
-        # 转换为字符串以处理 StringPromptValue 等对象
-        prompt_str = str(prompt)
-        # 强制要求中文输出
-        if "chinese" not in prompt_str.lower():
-             prompt_str += "\n\n请使用中文回答 (Please respond in Chinese)."
-             
-        # 模拟 Ragas 需要的异步文本生成
-        response = self.client.models.generate_content(
-            model=self.model,
-            contents=prompt_str
-        )
-        return LLMResult(generations=[[Generation(text=response.text)]])
-    
-    async def agenerate_text(self, prompt: t.Any, **kwargs) -> LLMResult:
-        # 转换为字符串以处理 StringPromptValue 等对象
-        prompt_str = str(prompt)
-        # 强制要求中文输出
-        if "chinese" not in prompt_str.lower():
-             prompt_str += "\n\n请使用中文回答 (Please respond in Chinese)."
-
-        # 模拟 Ragas 需要的异步文本生成
-        response = await self.client.aio.models.generate_content(
-            model=self.model,
-            contents=prompt_str
-        )
-        return LLMResult(generations=[[Generation(text=response.text)]])
-
-    # 2. 这里的 is_finished 通常在基类有默认实现，但如果报错请补上
-    def is_finished(self, response):
-        return True
-        
 # 3. 构建工厂类，并使用缓存
-
-# generator_llm = llm_factory(provider="google", model=llm_model, client=client, cache=cache)
 generator_llm = GoogleGenAIWrapper(client=client, model=llm_model, cache=cache)
 embeddings = embedding_factory(provider="google", model=embedding_model, client=client, cache=cache)
-# from ragas.embeddings import GoogleEmbeddings
-# embeddings = GoogleEmbeddings(client=client, model=embedding_model, cache=cache)
 
 # %% [markdown]
 # ### 2.2. 生成评测集
@@ -350,7 +287,7 @@ dataset.to_pandas()
 
 # %%
 from google import genai
-from rag4pdf.rag import default_rag_client
+from rag4pdf import default_rag_client
 api_key = os.environ["GOOGLE_API_KEY"]
 client = genai.Client(api_key=api_key)
 
@@ -361,7 +298,7 @@ import logging
 import tenacity
 import re
 from google.genai import errors
-from rag4pdf.rag import SimpleRAG, robust_json_parse, is_retryable_error
+from rag4pdf import SimpleRAG, robust_json_parse, is_retryable_error
 
 # 配置日志
 logging.basicConfig(level=logging.INFO)
@@ -378,7 +315,7 @@ print(f"SimpleRAG 初始化完成，已加载 {len(documents)} 个文档切片")
 
 
 # %%
-dataset = Dataset.load(name="维度建模", backend="local/jsonl", root_dir="./ragas_data")
+dataset = Dataset.load(name="维度建模", backend="local/jsonl", root_dir="../ragas_data")
 d = dataset[3]
 user_input = d["user_input"]
 pred = rag_client.query(user_input)
@@ -469,162 +406,16 @@ import tenacity
 import json
 import logging
 from google.genai import errors
-from rag4pdf.rag import is_retryable_error, robust_json_parse
+from rag4pdf.utils import is_retryable_error, robust_json_parse
+from rag4pdf.eval import correctness_metric, faithfulness_metric, answer_relevance_metric
 
 logger = logging.getLogger(__name__)
 
-# 注意：is_retryable_error 和 robust_json_parse 已从 rag.py 导入
-
-@numeric_metric(name="correctness", allowed_values=(0.0, 5.0))
-def correctness_metric_sync(user_input: str, reference: str, prediction: str):
-    """使用 LLM 作为裁判进行评分，包含重试机制。"""
-    if isinstance(prediction, str) and ("ERROR" in prediction or "Error" in prediction):
-        return MetricResult(value=0.0, reason=f"预测出错: {prediction}")
-    
-    prediction = str(prediction).strip()
-    reference = str(reference).strip()
-
-    # 封装带重试的内部调用
-    @tenacity.retry(
-        wait=tenacity.wait_exponential(multiplier=1, min=2, max=30),
-        stop=tenacity.stop_after_attempt(5),
-        retry=tenacity.retry_if_exception(is_retryable_error),
-        before_sleep=tenacity.before_sleep_log(logger, logging.INFO),
-        reraise=True
-    )
-    def _call_llm():
-        return client.models.generate_content(
-            model="gemini-2.0-flash",
-            config={"response_mime_type": "application/json"},
-            contents=ANSWER_CORRECTNESS_PROMPT_SIMPLE.format(user_input=user_input, reference=reference, prediction=prediction)
-        )
-
-    try:
-        response = _call_llm()
-        judge_result = robust_json_parse(response.text)
-        result = float(judge_result["score"])
-        reason = judge_result["reasoning"]
-        
-    except Exception as e:
-        # 重试多次失败后的最终回退
-        result = 1.0 if prediction.lower() == reference.lower() else 0.0
-        reason = f"LLM 评分失败（已重试）: {str(e)}"
-        logger.warning(reason)
-    
-    return MetricResult(value=result, reason=reason)
-
-
-@numeric_metric(name="correctness", allowed_values=(0.0, 5.0))
-async def correctness_metric(user_input: str, reference: str, prediction: str):
-    """使用 LLM 作为裁判进行异步评分，包含重试机制。"""
-    if isinstance(prediction, str) and ("ERROR" in prediction or "Error" in prediction):
-        return MetricResult(value=0.0, reason=f"预测出错: {prediction}")
-    
-    prediction = str(prediction).strip()
-    reference = str(reference).strip()
-
-    # 封装带重试的异步内部调用
-    @tenacity.retry(
-        wait=tenacity.wait_exponential(multiplier=1, min=2, max=30),
-        stop=tenacity.stop_after_attempt(5),
-        retry=tenacity.retry_if_exception(is_retryable_error),
-        before_sleep=tenacity.before_sleep_log(logger, logging.INFO),
-        reraise=True
-    )
-    async def _acall_llm():
-        return await client.aio.models.generate_content(
-            model="gemini-2.0-flash",
-            config={"response_mime_type": "application/json"},
-            contents=ANSWER_CORRECTNESS_PROMPT_SIMPLE.format(user_input=user_input, reference=reference, prediction=prediction)
-        )
-
-    try:
-        response = await _acall_llm()
-        judge_result = robust_json_parse(response.text)
-        result = float(judge_result["score"])
-        reason = judge_result["reasoning"]
-        
-    except Exception as e:
-        # 重试多次失败后的最终回退
-        result = 1.0 if prediction.lower() == reference.lower() else 0.0
-        reason = f"LLM 评分失败（已重试）: {str(e)}"
-        logger.warning(reason)
-    
-    return MetricResult(value=result, reason=reason)
-
-@numeric_metric(name="faithfulness", allowed_values=(0.0, 5.0))
-async def faithfulness_metric(context: str, prediction: str):
-    """评估答案是否忠实于上下文，包含重试机制。"""
-    if not context:
-        return MetricResult(value=0.0, reason="无上下文可供对比")
-    
-    prediction = str(prediction).strip()
-    context = str(context).strip()
-
-    @tenacity.retry(
-        wait=tenacity.wait_exponential(multiplier=1, min=2, max=30),
-        stop=tenacity.stop_after_attempt(5),
-        retry=tenacity.retry_if_exception(is_retryable_error),
-        before_sleep=tenacity.before_sleep_log(logger, logging.INFO),
-        reraise=True
-    )
-    async def _acall_llm():
-        return await client.aio.models.generate_content(
-            model="gemini-2.0-flash",
-            config={"response_mime_type": "application/json"},
-            contents=FAITHFULNESS_PROMPT.format(context=context, prediction=prediction)
-        )
-
-    try:
-        response = await _acall_llm()
-        judge_result = robust_json_parse(response.text)
-        result = float(judge_result["score"])
-        reason = judge_result["reasoning"]
-        
-    except Exception as e:
-        result = 0.0
-        reason = f"Faithfulness LLM 评分失败: {str(e)}"
-        logger.warning(reason)
-    
-    return MetricResult(value=result, reason=reason)
-
-@numeric_metric(name="answer_relevance", allowed_values=(0.0, 5.0))
-async def answer_relevance_metric(user_input: str, prediction: str):
-    """评估答案与问题的相关性，包含重试机制。"""
-    prediction = str(prediction).strip()
-    user_input = str(user_input).strip()
-
-    @tenacity.retry(
-        wait=tenacity.wait_exponential(multiplier=1, min=2, max=30),
-        stop=tenacity.stop_after_attempt(5),
-        retry=tenacity.retry_if_exception(is_retryable_error),
-        before_sleep=tenacity.before_sleep_log(logger, logging.INFO),
-        reraise=True
-    )
-    async def _acall_llm():
-        return await client.aio.models.generate_content(
-            model="gemini-2.0-flash",
-            config={"response_mime_type": "application/json"},
-            contents=ANSWER_RELEVANCE_PROMPT.format(user_input=user_input, prediction=prediction)
-        )
-
-    try:
-        response = await _acall_llm()
-        judge_result = robust_json_parse(response.text)
-        result = float(judge_result["score"])
-        reason = judge_result["reasoning"]
-        
-    except Exception as e:
-        result = 0.0
-        reason = f"Answer Relevance LLM 评分失败: {str(e)}"
-        logger.warning(reason)
-    
-    return MetricResult(value=result, reason=reason)
-
-
+# 指标已经在 rag4pdf.eval 中定义，直接使用即可。
+# 如果需要自定义指标，可以参考 eval.py 中的实现。
 
 # %%
-dataset = Dataset.load(name="维度建模", backend="local/jsonl", root_dir="./ragas_data")
+dataset = Dataset.load(name="维度建模", backend="local/jsonl", root_dir="../ragas_data")
 d = dataset[3]
 user_input = d["user_input"]
 reference = d["reference"]
@@ -634,7 +425,8 @@ print(ANSWER_CORRECTNESS_PROMPT_SIMPLE.format(user_input=user_input, reference=r
 # %%
 import time
 start = time.time()
-correctness_metric.score(user_input=user_input, reference=reference, prediction=prediction)
+# Passing the global client
+await correctness_metric.ascore(user_input=user_input, reference=reference, prediction=prediction, client=client)
 print(f"Correctness metric took: {time.time() - start:.2f}s")
 
 # %% [markdown]
@@ -649,9 +441,6 @@ async def run_experiment(row):
     user_input = row["user_input"]
     reference = row["reference"]
     
-    # logging.debug(f"Question: {user_input}")
-    # start = time.time()
-    
     response = await rag_client.aquery(user_input)
     prediction = response["answer"]
     retrieved_docs = response.get("retrieved_docs", [])
@@ -660,12 +449,10 @@ async def run_experiment(row):
     context = "\n\n".join([doc["content"] for doc in retrieved_docs])
 
     # Calculate metrics
-    correctness = correctness_metric.score(user_input=user_input, reference=reference, prediction=prediction)
-    faithfulness = await faithfulness_metric.ascore(context=context, prediction=prediction)
-    # 计算答案相关性
-    answer_relevance = await answer_relevance_metric.ascore(user_input=user_input, prediction=prediction)
-
-    # logging.debug(f"Metrics calculation took: {time.time() - start:.2f}s {user_input}")
+    # Passing the global client to metrics
+    correctness = await correctness_metric.ascore(user_input=user_input, reference=reference, prediction=prediction, client=client)
+    faithfulness = await faithfulness_metric.ascore(context=context, prediction=prediction, client=client)
+    answer_relevance = await answer_relevance_metric.ascore(user_input=user_input, prediction=prediction, client=client)
 
     return {
         "expression": user_input,
@@ -681,13 +468,12 @@ async def run_experiment(row):
     }
 
 
-
 # %% [markdown]
 # ### 3.5 开始评测(Evaluation)
 
 # %%
 async def run_evaluation():
-    dataset = Dataset.load(name="维度建模", backend="local/jsonl", root_dir="./ragas_data")
+    dataset = Dataset.load(name="维度建模", backend="local/jsonl", root_dir="../ragas_data")
     #logging.info("Experiment started successfully!")
     #start = time.time()
     experiment_results: Experiment = await run_experiment.arun(dataset)
