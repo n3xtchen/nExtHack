@@ -23,7 +23,7 @@ from rag4pdf import (
     build_knowledge_graph,
     default_rag_client,
     GoogleGenAIWrapper,
-    # get_testset_generator
+    generate_testset
 )
 from rag4pdf.eval import (
     correctness_metric,
@@ -189,35 +189,18 @@ kg = build_knowledge_graph(
     run_config=run_config
 )
 
-# %%
-# 保存图谱到本地
-kg.save(kg_path)
-
 # %% [markdown]
 # #### 2.2.2. 生成评测集
 
 # %%
-from ragas.testset import TestsetGenerator
-
-# 2. 初始化生成器 (此时它已拥有所有向量和实体信息)
-from ragas.testset.graph import KnowledgeGraph
-kg = KnowledgeGraph.load(kg_path)
-generator = TestsetGenerator(generator_llm, embeddings, knowledge_graph=kg)
-
-# 3. 生成题目 (因为不用再做 NER 和 Embedding，这步很快且报错率极低)
-
-# 如果你希望简单省事，可以直接使用默认分布函数
-from ragas.testset.synthesizers import default_query_distribution
-from ragas.testset.synthesizers.single_hop.specific import SingleHopSpecificQuerySynthesizer
-query_distribution = [
-    (SingleHopSpecificQuerySynthesizer(llm=generator_llm), 1.0)
-] if query_dist is not None else default_query_distribution(generator_llm)
-
-testset = generator.generate(
+# 使用库函数生成测试集
+testset = generate_testset(
+    generator_llm=generator_llm,
+    embeddings=embeddings,
+    kg_path=kg_path,
     testset_size=testset_size,
-    query_distribution=query_distribution,
+    query_distribution=None, # 使用默认分布
     run_config=run_config
-    # with_debugging_logs=True
 )
 
 df = testset.to_pandas()

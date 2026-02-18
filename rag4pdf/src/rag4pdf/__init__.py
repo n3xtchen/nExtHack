@@ -17,7 +17,8 @@ from .build import (
 from .eval import (
     GoogleGenAIWrapper,
     run_evaluation,
-    run_experiment
+    run_experiment,
+    generate_testset
 )
 
 __all__ = [
@@ -33,5 +34,6 @@ __all__ = [
     "build_knowledge_graph",
     "GoogleGenAIWrapper",
     "run_evaluation",
-    "run_experiment"
+    "run_experiment",
+    "generate_testset"
 ]

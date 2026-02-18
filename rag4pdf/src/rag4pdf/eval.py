@@ -68,6 +68,60 @@ def get_testset_generator(llm, embeddings, kg_path: str) -> TestsetGenerator:
     return TestsetGenerator(llm, embeddings, knowledge_graph=kg)
 
 
+def generate_testset(
+    generator_llm,
+    embeddings,
+    kg_path: str,
+    testset_size: t.Optional[int] = None,
+    proportion: t.Optional[float] = None,
+    query_distribution: t.Optional[t.Union[t.Any, t.Dict[str, float]]] = None,
+    run_config: t.Optional[RunConfig] = None,
+) -> Dataset:
+    """
+    生成测试集。
+
+    query_distribution 可以是 Ragas 原生格式，也可以是简单的字典：
+    {"simple": 0.5, "reasoning": 0.2, "multi_context": 0.3}
+    """
+    kg = KnowledgeGraph.load(kg_path)
+
+    if testset_size is None:
+        if proportion is not None:
+            testset_size = int(len(kg.nodes) * proportion)
+        else:
+            testset_size = 10
+
+    testset_size = max(testset_size, 1)
+
+    if query_distribution is None:
+        from ragas.testset.synthesizers import default_query_distribution
+        query_distribution = default_query_distribution(generator_llm)
+    elif isinstance(query_distribution, dict):
+        from ragas.testset.synthesizers.multi_hop.abstract import \
+            MultiHopAbstractQuerySynthesizer
+        from ragas.testset.synthesizers.multi_hop.specific import \
+            MultiHopSpecificQuerySynthesizer
+        from ragas.testset.synthesizers.single_hop.specific import \
+            SingleHopSpecificQuerySynthesizer
+
+        mapping = {
+            "simple": SingleHopSpecificQuerySynthesizer(llm=generator_llm),
+            "reasoning": MultiHopSpecificQuerySynthesizer(llm=generator_llm),
+            "multi_context": MultiHopAbstractQuerySynthesizer(llm=generator_llm),
+        }
+        query_distribution = [
+            (mapping[k], v) for k, v in query_distribution.items() if k in mapping
+        ]
+
+    generator = TestsetGenerator(generator_llm, embeddings, knowledge_graph=kg)
+    testset = generator.generate(
+        testset_size=testset_size,
+        query_distribution=query_distribution,
+        run_config=run_config
+    )
+    return testset
+
+
 # --- 评测指标定义 ---
 
 ANSWER_CORRECTNESS_PROMPT = """评估生成答案相对于参考答案的准确性。
