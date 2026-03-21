@@ -1,5 +1,365 @@
 model_list:
-  - model_name: gpt-5
+  - model_name: gemini/gemini-2.0-flash-exp-image-generation
+    litellm_params:
+      model: gemini/gemini-2.0-flash-exp-image-generation
+      api_key: os.environ/GEMINI_API_KEY
+  - model_name: gemini/gemini-2.5-flash-native-audio-latest
+    litellm_params:
+      model: gemini/gemini-2.5-flash-native-audio-latest
+      api_key: os.environ/GEMINI_API_KEY
+  - model_name: gemini/gemini-2.5-flash-native-audio-preview-09-2025
+    litellm_params:
+      model: gemini/gemini-2.5-flash-native-audio-preview-09-2025
+      api_key: os.environ/GEMINI_API_KEY
+  - model_name: gemini/gemini-2.5-flash-native-audio-preview-12-2025
+    litellm_params:
+      model: gemini/gemini-2.5-flash-native-audio-preview-12-2025
+      api_key: os.environ/GEMINI_API_KEY
+  - model_name: gemini/gemini-2.5-flash-preview-tts
+    litellm_params:
+      model: gemini/gemini-2.5-flash-preview-tts
+      api_key: os.environ/GEMINI_API_KEY
+  - model_name: gemini/gemini-exp-1206
+    litellm_params:
+      model: gemini/gemini-exp-1206
+      api_key: os.environ/GEMINI_API_KEY
+  - model_name: gemini/gemini-flash-latest
+    litellm_params:
+      model: gemini/gemini-flash-latest
+      api_key: os.environ/GEMINI_API_KEY
+  - model_name: gemini/gemini-flash-lite-latest
+    litellm_params:
+      model: gemini/gemini-flash-lite-latest
+      api_key: os.environ/GEMINI_API_KEY
+  - model_name: gemini/gemini-pro-latest
+    litellm_params:
+      model: gemini/gemini-pro-latest
+      api_key: os.environ/GEMINI_API_KEY
+  - model_name: gemini/deep-research-pro-preview-12-2025
+    litellm_params:
+      model: gemini/deep-research-pro-preview-12-2025
+      api_key: os.environ/GEMINI_API_KEY
+  - model_name: gemini/gemini-1.5-flash
+    litellm_params:
+      model: gemini/gemini-1.5-flash
+      api_key: os.environ/GEMINI_API_KEY
+  - model_name: gemini/gemini-2.0-flash
+    litellm_params:
+      model: gemini/gemini-2.0-flash
+      api_key: os.environ/GEMINI_API_KEY
+  - model_name: gemini/gemini-2.0-flash-001
+    litellm_params:
+      model: gemini/gemini-2.0-flash-001
+      api_key: os.environ/GEMINI_API_KEY
+  - model_name: gemini/gemini-2.0-flash-exp-image-generation
+    litellm_params:
+      model: gemini/gemini-2.0-flash-exp-image-generation
+      api_key: os.environ/GEMINI_API_KEY
+  - model_name: gemini/gemini-2.0-flash-lite
+    litellm_params:
+      model: gemini/gemini-2.0-flash-lite
+      api_key: os.environ/GEMINI_API_KEY
+  - model_name: gemini/gemini-2.0-flash-lite-001
+    litellm_params:
+      model: gemini/gemini-2.0-flash-lite-001
+      api_key: os.environ/GEMINI_API_KEY
+  - model_name: gemini/gemini-2.5-computer-use-preview-10-2025
+    litellm_params:
+      model: gemini/gemini-2.5-computer-use-preview-10-2025
+      api_key: os.environ/GEMINI_API_KEY
+  - model_name: gemini/gemini-2.5-flash
+    litellm_params:
+      model: gemini/gemini-2.5-flash
+      api_key: os.environ/GEMINI_API_KEY
+  - model_name: gemini/gemini-2.5-flash-image
+    litellm_params:
+      model: gemini/gemini-2.5-flash-image
+      api_key: os.environ/GEMINI_API_KEY
+  - model_name: gemini/gemini-2.5-flash-lite
+    litellm_params:
+      model: gemini/gemini-2.5-flash-lite
+      api_key: os.environ/GEMINI_API_KEY
+  - model_name: gemini/gemini-2.5-flash-lite-preview-06-17
+    litellm_params:
+      model: gemini/gemini-2.5-flash-lite-preview-06-17
+      api_key: os.environ/GEMINI_API_KEY
+  - model_name: gemini/gemini-2.5-flash-lite-preview-09-2025
+    litellm_params:
+      model: gemini/gemini-2.5-flash-lite-preview-09-2025
+      api_key: os.environ/GEMINI_API_KEY
+  - model_name: gemini/gemini-2.5-flash-native-audio-latest
+    litellm_params:
+      model: gemini/gemini-2.5-flash-native-audio-latest
+      api_key: os.environ/GEMINI_API_KEY
+  - model_name: gemini/gemini-2.5-flash-native-audio-preview-09-2025
+    litellm_params:
+      model: gemini/gemini-2.5-flash-native-audio-preview-09-2025
+      api_key: os.environ/GEMINI_API_KEY
+  - model_name: gemini/gemini-2.5-flash-native-audio-preview-12-2025
+    litellm_params:
+      model: gemini/gemini-2.5-flash-native-audio-preview-12-2025
+      api_key: os.environ/GEMINI_API_KEY
+  - model_name: gemini/gemini-2.5-flash-preview-09-2025
+    litellm_params:
+      model: gemini/gemini-2.5-flash-preview-09-2025
+      api_key: os.environ/GEMINI_API_KEY
+  - model_name: gemini/gemini-2.5-flash-preview-tts
+    litellm_params:
+      model: gemini/gemini-2.5-flash-preview-tts
+      api_key: os.environ/GEMINI_API_KEY
+  - model_name: gemini/gemini-2.5-pro
+    litellm_params:
+      model: gemini/gemini-2.5-pro
+      api_key: os.environ/GEMINI_API_KEY
+  - model_name: gemini/gemini-2.5-pro-preview-tts
+    litellm_params:
+      model: gemini/gemini-2.5-pro-preview-tts
+      api_key: os.environ/GEMINI_API_KEY
+  - model_name: gemini/gemini-3-flash-preview
+    litellm_params:
+      model: gemini/gemini-3-flash-preview
+      api_key: os.environ/GEMINI_API_KEY
+  - model_name: gemini/gemini-3-pro-image-preview
+    litellm_params:
+      model: gemini/gemini-3-pro-image-preview
+      api_key: os.environ/GEMINI_API_KEY
+  - model_name: gemini/gemini-3-pro-preview
+    litellm_params:
+      model: gemini/gemini-3-pro-preview
+      api_key: os.environ/GEMINI_API_KEY
+  - model_name: gemini/gemini-3.1-flash-image-preview
+    litellm_params:
+      model: gemini/gemini-3.1-flash-image-preview
+      api_key: os.environ/GEMINI_API_KEY
+  - model_name: gemini/gemini-3.1-flash-lite-preview
+    litellm_params:
+      model: gemini/gemini-3.1-flash-lite-preview
+      api_key: os.environ/GEMINI_API_KEY
+  - model_name: gemini/gemini-3.1-pro-preview
+    litellm_params:
+      model: gemini/gemini-3.1-pro-preview
+      api_key: os.environ/GEMINI_API_KEY
+  - model_name: gemini/gemini-3.1-pro-preview-customtools
+    litellm_params:
+      model: gemini/gemini-3.1-pro-preview-customtools
+      api_key: os.environ/GEMINI_API_KEY
+  - model_name: gemini/gemini-embedding-001
+    litellm_params:
+      model: gemini/gemini-embedding-001
+      api_key: os.environ/GEMINI_API_KEY
+  - model_name: gemini/gemini-embedding-2-preview
+    litellm_params:
+      model: gemini/gemini-embedding-2-preview
+      api_key: os.environ/GEMINI_API_KEY
+  - model_name: gemini/gemini-exp-1114
+    litellm_params:
+      model: gemini/gemini-exp-1114
+      api_key: os.environ/GEMINI_API_KEY
+  - model_name: gemini/gemini-exp-1206
+    litellm_params:
+      model: gemini/gemini-exp-1206
+      api_key: os.environ/GEMINI_API_KEY
+  - model_name: gemini/gemini-flash-latest
+    litellm_params:
+      model: gemini/gemini-flash-latest
+      api_key: os.environ/GEMINI_API_KEY
+  - model_name: gemini/gemini-flash-lite-latest
+    litellm_params:
+      model: gemini/gemini-flash-lite-latest
+      api_key: os.environ/GEMINI_API_KEY
+  - model_name: gemini/gemini-gemma-2-27b-it
+    litellm_params:
+      model: gemini/gemini-gemma-2-27b-it
+      api_key: os.environ/GEMINI_API_KEY
+  - model_name: gemini/gemini-gemma-2-9b-it
+    litellm_params:
+      model: gemini/gemini-gemma-2-9b-it
+      api_key: os.environ/GEMINI_API_KEY
+  - model_name: gemini/gemini-live-2.5-flash-preview-native-audio-09-2025
+    litellm_params:
+      model: gemini/gemini-live-2.5-flash-preview-native-audio-09-2025
+      api_key: os.environ/GEMINI_API_KEY
+  - model_name: gemini/gemini-pro-latest
+    litellm_params:
+      model: gemini/gemini-pro-latest
+      api_key: os.environ/GEMINI_API_KEY
+  - model_name: gemini/gemini-robotics-er-1.5-preview
+    litellm_params:
+      model: gemini/gemini-robotics-er-1.5-preview
+      api_key: os.environ/GEMINI_API_KEY
+  - model_name: gemini/gemma-3-27b-it
+    litellm_params:
+      model: gemini/gemma-3-27b-it
+      api_key: os.environ/GEMINI_API_KEY
+  - model_name: gemini/imagen-3.0-fast-generate-001
+    litellm_params:
+      model: gemini/imagen-3.0-fast-generate-001
+      api_key: os.environ/GEMINI_API_KEY
+  - model_name: gemini/imagen-3.0-generate-001
+    litellm_params:
+      model: gemini/imagen-3.0-generate-001
+      api_key: os.environ/GEMINI_API_KEY
+  - model_name: gemini/imagen-3.0-generate-002
+    litellm_params:
+      model: gemini/imagen-3.0-generate-002
+      api_key: os.environ/GEMINI_API_KEY
+  - model_name: gemini/imagen-4.0-fast-generate-001
+    litellm_params:
+      model: gemini/imagen-4.0-fast-generate-001
+      api_key: os.environ/GEMINI_API_KEY
+  - model_name: gemini/imagen-4.0-generate-001
+    litellm_params:
+      model: gemini/imagen-4.0-generate-001
+      api_key: os.environ/GEMINI_API_KEY
+  - model_name: gemini/imagen-4.0-ultra-generate-001
+    litellm_params:
+      model: gemini/imagen-4.0-ultra-generate-001
+      api_key: os.environ/GEMINI_API_KEY
+  - model_name: gemini/learnlm-1.5-pro-experimental
+    litellm_params:
+      model: gemini/learnlm-1.5-pro-experimental
+      api_key: os.environ/GEMINI_API_KEY
+  - model_name: gemini/veo-2.0-generate-001
+    litellm_params:
+      model: gemini/veo-2.0-generate-001
+      api_key: os.environ/GEMINI_API_KEY
+  - model_name: gemini/veo-3.1-fast-generate-001
+    litellm_params:
+      model: gemini/veo-3.1-fast-generate-001
+      api_key: os.environ/GEMINI_API_KEY
+  - model_name: gemini/veo-3.1-fast-generate-preview
+    litellm_params:
+      model: gemini/veo-3.1-fast-generate-preview
+      api_key: os.environ/GEMINI_API_KEY
+  - model_name: gemini/veo-3.1-generate-001
+    litellm_params:
+      model: gemini/veo-3.1-generate-001
+      api_key: os.environ/GEMINI_API_KEY
+  - model_name: gemini/veo-3.1-generate-preview
+    litellm_params:
+      model: gemini/veo-3.1-generate-preview
+      api_key: os.environ/GEMINI_API_KEY
+  - model_name: ghclaude-haiku-4.5
+    litellm_params:
+      model: github_copilot/claude-haiku-4.5
+      extra_headers: {"Editor-Version": "vscode/1.85.1", "Copilot-Integration-Id": "vscode-chat"}
+  - model_name: ghclaude-opus-4.5
+    litellm_params:
+      model: github_copilot/claude-opus-4.5
+      extra_headers: {"Editor-Version": "vscode/1.85.1", "Copilot-Integration-Id": "vscode-chat"}
+  - model_name: ghclaude-opus-4.6-fast
+    litellm_params:
+      model: github_copilot/claude-opus-4.6-fast
+      extra_headers: {"Editor-Version": "vscode/1.85.1", "Copilot-Integration-Id": "vscode-chat"}
+  - model_name: ghclaude-opus-41
+    litellm_params:
+      model: github_copilot/claude-opus-41
+      extra_headers: {"Editor-Version": "vscode/1.85.1", "Copilot-Integration-Id": "vscode-chat"}
+  - model_name: ghclaude-sonnet-4
+    litellm_params:
+      model: github_copilot/claude-sonnet-4
+      extra_headers: {"Editor-Version": "vscode/1.85.1", "Copilot-Integration-Id": "vscode-chat"}
+  - model_name: ghclaude-sonnet-4.5
+    litellm_params:
+      model: github_copilot/claude-sonnet-4.5
+      extra_headers: {"Editor-Version": "vscode/1.85.1", "Copilot-Integration-Id": "vscode-chat"}
+  - model_name: ghgemini-2.5-pro
+    litellm_params:
+      model: github_copilot/gemini-2.5-pro
+      extra_headers: {"Editor-Version": "vscode/1.85.1", "Copilot-Integration-Id": "vscode-chat"}
+  - model_name: ghgemini-3-pro-preview
+    litellm_params:
+      model: github_copilot/gemini-3-pro-preview
+      extra_headers: {"Editor-Version": "vscode/1.85.1", "Copilot-Integration-Id": "vscode-chat"}
+  - model_name: ghgpt-3.5-turbo
+    litellm_params:
+      model: github_copilot/gpt-3.5-turbo
+      extra_headers: {"Editor-Version": "vscode/1.85.1", "Copilot-Integration-Id": "vscode-chat"}
+  - model_name: ghgpt-3.5-turbo-0613
+    litellm_params:
+      model: github_copilot/gpt-3.5-turbo-0613
+      extra_headers: {"Editor-Version": "vscode/1.85.1", "Copilot-Integration-Id": "vscode-chat"}
+  - model_name: ghgpt-4
+    litellm_params:
+      model: github_copilot/gpt-4
+      extra_headers: {"Editor-Version": "vscode/1.85.1", "Copilot-Integration-Id": "vscode-chat"}
+  - model_name: ghgpt-4-0613
+    litellm_params:
+      model: github_copilot/gpt-4-0613
+      extra_headers: {"Editor-Version": "vscode/1.85.1", "Copilot-Integration-Id": "vscode-chat"}
+  - model_name: ghgpt-4-o-preview
+    litellm_params:
+      model: github_copilot/gpt-4-o-preview
+      extra_headers: {"Editor-Version": "vscode/1.85.1", "Copilot-Integration-Id": "vscode-chat"}
+  - model_name: ghgpt-4.1
+    litellm_params:
+      model: github_copilot/gpt-4.1
+      extra_headers: {"Editor-Version": "vscode/1.85.1", "Copilot-Integration-Id": "vscode-chat"}
+  - model_name: ghgpt-4.1-2025-04-14
+    litellm_params:
+      model: github_copilot/gpt-4.1-2025-04-14
+      extra_headers: {"Editor-Version": "vscode/1.85.1", "Copilot-Integration-Id": "vscode-chat"}
+  - model_name: ghgpt-41-copilot
+    litellm_params:
+      model: github_copilot/gpt-41-copilot
+      extra_headers: {"Editor-Version": "vscode/1.85.1", "Copilot-Integration-Id": "vscode-chat"}
+  - model_name: ghgpt-4o
+    litellm_params:
+      model: github_copilot/gpt-4o
+      extra_headers: {"Editor-Version": "vscode/1.85.1", "Copilot-Integration-Id": "vscode-chat"}
+  - model_name: ghgpt-4o-2024-05-13
+    litellm_params:
+      model: github_copilot/gpt-4o-2024-05-13
+      extra_headers: {"Editor-Version": "vscode/1.85.1", "Copilot-Integration-Id": "vscode-chat"}
+  - model_name: ghgpt-4o-2024-08-06
+    litellm_params:
+      model: github_copilot/gpt-4o-2024-08-06
+      extra_headers: {"Editor-Version": "vscode/1.85.1", "Copilot-Integration-Id": "vscode-chat"}
+  - model_name: ghgpt-4o-2024-11-20
+    litellm_params:
+      model: github_copilot/gpt-4o-2024-11-20
+      extra_headers: {"Editor-Version": "vscode/1.85.1", "Copilot-Integration-Id": "vscode-chat"}
+  - model_name: ghgpt-4o-mini
+    litellm_params:
+      model: github_copilot/gpt-4o-mini
+      extra_headers: {"Editor-Version": "vscode/1.85.1", "Copilot-Integration-Id": "vscode-chat"}
+  - model_name: ghgpt-4o-mini-2024-07-18
+    litellm_params:
+      model: github_copilot/gpt-4o-mini-2024-07-18
+      extra_headers: {"Editor-Version": "vscode/1.85.1", "Copilot-Integration-Id": "vscode-chat"}
+  - model_name: ghgpt-5
     litellm_params:
       model: github_copilot/gpt-5
+      extra_headers: {"Editor-Version": "vscode/1.85.1", "Copilot-Integration-Id": "vscode-chat"}
+  - model_name: ghgpt-5-mini
+    litellm_params:
+      model: github_copilot/gpt-5-mini
+      extra_headers: {"Editor-Version": "vscode/1.85.1", "Copilot-Integration-Id": "vscode-chat"}
+  - model_name: ghgpt-5.1
+    litellm_params:
+      model: github_copilot/gpt-5.1
+      extra_headers: {"Editor-Version": "vscode/1.85.1", "Copilot-Integration-Id": "vscode-chat"}
+  - model_name: ghgpt-5.1-codex-max
+    litellm_params:
+      model: github_copilot/gpt-5.1-codex-max
+      extra_headers: {"Editor-Version": "vscode/1.85.1", "Copilot-Integration-Id": "vscode-chat"}
+  - model_name: ghgpt-5.2
+    litellm_params:
+      model: github_copilot/gpt-5.2
+      extra_headers: {"Editor-Version": "vscode/1.85.1", "Copilot-Integration-Id": "vscode-chat"}
+  - model_name: ghgpt-5.3-codex
+    litellm_params:
+      model: github_copilot/gpt-5.3-codex
+      extra_headers: {"Editor-Version": "vscode/1.85.1", "Copilot-Integration-Id": "vscode-chat"}
+  - model_name: ghtext-embedding-3-small
+    litellm_params:
+      model: github_copilot/text-embedding-3-small
+      extra_headers: {"Editor-Version": "vscode/1.85.1", "Copilot-Integration-Id": "vscode-chat"}
+  - model_name: ghtext-embedding-3-small-inference
+    litellm_params:
+      model: github_copilot/text-embedding-3-small-inference
+      extra_headers: {"Editor-Version": "vscode/1.85.1", "Copilot-Integration-Id": "vscode-chat"}
+  - model_name: ghtext-embedding-ada-002
+    litellm_params:
+      model: github_copilot/text-embedding-ada-002
       extra_headers: {"Editor-Version": "vscode/1.85.1", "Copilot-Integration-Id": "vscode-chat"}
