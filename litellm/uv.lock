@@ -1240,16 +1240,20 @@ wheels = [
 [[package]]
 name = "nlitellm-proxy"
 version = "0.1.0"
-source = { virtual = "." }
+source = { editable = "." }
 dependencies = [
     { name = "litellm", extra = ["proxy"] },
     { name = "prisma" },
+    { name = "python-dotenv" },
+    { name = "pyyaml" },
 ]
 
 [package.metadata]
 requires-dist = [
     { name = "litellm", extras = ["proxy"], specifier = ">=1.74.0" },
     { name = "prisma" },
+    { name = "python-dotenv" },
+    { name = "pyyaml" },
 ]
 
 [[package]]

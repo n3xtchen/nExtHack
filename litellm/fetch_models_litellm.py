@@ -18,7 +18,7 @@ def fetch_new_model_list():
     for model in gemini_models:
         full_model_name = model if '/' in model else f"gemini/{model}"
         new_model_list.append({
-            'model_name': full_model_name,
+            'model_name': full_model_name.split('/')[-1],
             'litellm_params': {
                 'model': full_model_name,
                 'api_key': 'os.environ/GEMINI_API_KEY'
