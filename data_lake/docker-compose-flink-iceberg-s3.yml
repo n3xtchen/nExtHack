@@ -1,0 +1,82 @@
+version: "3.8"
+
+# Flink + Iceberg + S3 (RustFS) 集成环境
+#
+# 使用说明：
+# 1. 启动 RustFS S3 服务：./start_rustfs.sh (或运行 test_rustfs.sh 验证)
+# 2. 设置环境变量（从 test_rustfs.sh 获取）：
+#    export AWS_ACCESS_KEY_ID=n3xtchen
+#    export AWS_SECRET_ACCESS_KEY=n3xtchen
+#    export AWS_ENDPOINT_URL=http://localhost:9000
+# 3. 启动 Flink + Iceberg 容器：
+#    docker compose -f docker-compose-flink-iceberg-s3.yml up -d --build
+# 4. 连接 SQL Client：
+#    docker exec -it jobmanager ./bin/sql-client.sh
+
+services:
+  # Flink JobManager
+  jobmanager:
+    build:
+      context: ./flink-iceberg-image
+      dockerfile: Dockerfile
+    hostname: jobmanager
+    container_name: jobmanager
+    ports:
+      - "8081:8081"
+    command: jobmanager
+    networks:
+      - flink_net
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8081/overview"]
+      start_period: 30s
+      interval: 5s
+      timeout: 3s
+      retries: 5
+    environment:
+      # Flink 配置
+      FLINK_PROPERTIES: |
+        jobmanager.rpc.address: jobmanager
+        taskmanager.numberOfTaskSlots: 2
+        parallelism.default: 2
+        execution.checkpointing.mode: EXACTLY_ONCE
+        state.backend.type: hashmap
+      # S3/AWS 配置 - 从 RustFS 服务获取
+      AWS_REGION: us-east-1
+      AWS_ACCESS_KEY_ID: ${AWS_ACCESS_KEY_ID:-n3xtchen}
+      AWS_SECRET_ACCESS_KEY: ${AWS_SECRET_ACCESS_KEY:-n3xtchen}
+      AWS_ENDPOINT_URL: ${AWS_ENDPOINT_URL:-http://localhost:9000}
+      S3_ENDPOINT: ${AWS_ENDPOINT_URL:-http://localhost:9000}
+
+  # Flink TaskManager
+  taskmanager:
+    build:
+      context: ./flink-iceberg-image
+      dockerfile: Dockerfile
+    hostname: taskmanager
+    container_name: taskmanager
+    depends_on:
+      jobmanager:
+        condition: service_healthy
+    command: taskmanager
+    deploy:
+      replicas: 1
+    networks:
+      - flink_net
+    environment:
+      # Flink 配置
+      FLINK_PROPERTIES: |
+        jobmanager.rpc.address: jobmanager
+        taskmanager.numberOfTaskSlots: 2
+        parallelism.default: 2
+        execution.checkpointing.mode: EXACTLY_ONCE
+        state.backend.type: hashmap
+      # S3/AWS 配置 - 从 RustFS 服务获取
+      AWS_REGION: us-east-1
+      AWS_ACCESS_KEY_ID: ${AWS_ACCESS_KEY_ID:-n3xtchen}
+      AWS_SECRET_ACCESS_KEY: ${AWS_SECRET_ACCESS_KEY:-n3xtchen}
+      AWS_ENDPOINT_URL: ${AWS_ENDPOINT_URL:-http://localhost:9000}
+      S3_ENDPOINT: ${AWS_ENDPOINT_URL:-http://localhost:9000}
+
+networks:
+  flink_net:
+    driver: bridge
