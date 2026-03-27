@@ -6,9 +6,9 @@
 # 使用：./deploy-flink-s3.sh [start|stop|restart|logs]
 #
 # 说明：
-#   start   - 启动 Flink + Iceberg 环境（需要 RustFS 已启动）
-#   stop    - 停止 Flink + Iceberg 容器
-#   restart - 重启 Flink + Iceberg 容器
+#   start   - 启动 Flink + S3 环境（需要 RustFS 已启动）
+#   stop    - 停止 Flink + S3 容器
+#   restart - 重启 Flink + S3 容器
 #   logs    - 查看 Flink 容器日志
 ##############################################################################
 
@@ -25,8 +25,8 @@ NC='\033[0m' # No Color
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 
 # 配置
-COMPOSE_FILE="${SCRIPT_DIR}/docker-compose-flink-iceberg-s3.yml"
-DOCKER_IMAGE_DIR="${SCRIPT_DIR}/flink-iceberg-image"
+COMPOSE_FILE="${SCRIPT_DIR}/docker-compose-flink-s3.yml"
+DOCKER_IMAGE_DIR="${SCRIPT_DIR}/flink-s3-image"
 
 # 函数：打印标题
 print_header() {
@@ -86,7 +86,7 @@ check_compose_file() {
 
 # 函数：启动
 start() {
-    print_header "启动 Flink + Iceberg + S3 环境"
+    print_header "启动 Flink + S3 环境"
 
     # 检查前置条件
     check_docker
@@ -97,21 +97,21 @@ start() {
     print_info "配置 S3 环境变量..."
     export AWS_ACCESS_KEY_ID=n3xtchen
     export AWS_SECRET_ACCESS_KEY=n3xtchen
-    export AWS_ENDPOINT_URL=http://localhost:9000
+    export AWS_ENDPOINT_URL=http://host.docker.internal:9000
     print_success "S3 环境变量已设置"
 
     # 检查是否需要重新构建
-    if [ "$REBUILD_IMAGE" = "1" ] || ! docker images | grep -q "flink-iceberg"; then
-        print_info "开始构建 Flink Iceberg 镜像..."
+    if [ "$REBUILD_IMAGE" = "1" ] || ! docker images | grep -q "flink-s3"; then
+        print_info "开始构建 Flink S3 镜像..."
         cd "$SCRIPT_DIR"
         docker compose -f "$COMPOSE_FILE" build --no-cache
-        print_success "Flink Iceberg 镜像构建完成"
+        print_success "Flink S3 镜像构建完成"
     else
-        print_success "Flink Iceberg 镜像已存在 (使用 'rebuild' 参数强制重建)"
+        print_success "Flink S3 镜像已存在 (使用 'rebuild' 参数强制重建)"
     fi
 
     # 启动容器
-    print_info "启动 Flink 和 Iceberg 容器..."
+    print_info "启动 Flink 和 S3 容器..."
     cd "$SCRIPT_DIR"
     docker compose -f "$COMPOSE_FILE" up -d
     print_success "容器已启动"
@@ -156,7 +156,7 @@ start() {
 
 # 函数：停止
 stop() {
-    print_header "停止 Flink + Iceberg 环境"
+    print_header "停止 Flink + S3 环境"
 
     check_compose_file
 
@@ -172,7 +172,7 @@ stop() {
 
 # 函数：重启
 restart() {
-    print_header "重启 Flink + Iceberg 环境"
+    print_header "重启 Flink + S3 环境"
     stop
     sleep 2
     start
@@ -195,10 +195,10 @@ Flink S3 一键启动脚本
   $0 [命令]
 
 命令：
-  start       启动 Flink + Iceberg + S3 环境
+  start       启动 Flink + S3 环境
   rebuild     强制重建镜像并启动
-  stop        停止 Flink + Iceberg 容器
-  restart     重启 Flink + Iceberg 容器
+  stop        停止 Flink + S3 容器
+  restart     重启 Flink + S3 容器
   logs        查看 Flink 容器日志
   help        显示此帮助信息
 
@@ -212,7 +212,7 @@ Flink S3 一键启动脚本
 前置要求：
   - Docker 已安装并运行
   - RustFS S3 服务已启动 (./start_rustfs.sh)
-  - docker-compose-flink-iceberg-s3.yml 配置文件存在
+  - docker-compose-flink-s3.yml 配置文件存在
 
 常用命令：
   查看容器状态：

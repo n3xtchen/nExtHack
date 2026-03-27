@@ -9,7 +9,7 @@ version: "3.8"
 #    export AWS_SECRET_ACCESS_KEY=n3xtchen
 #    export AWS_ENDPOINT_URL=http://localhost:9000
 # 3. 启动 Flink + Iceberg 容器：
-#    docker compose -f docker-compose-flink-iceberg-s3.yml up -d --build
+#    docker compose -f docker-compose-flink-s3-s3.yml up -d --build
 # 4. 连接 SQL Client：
 #    docker exec -it jobmanager ./bin/sql-client.sh
 
@@ -17,7 +17,7 @@ services:
   # Flink JobManager
   jobmanager:
     build:
-      context: ./flink-iceberg-image
+      context: ./flink-s3-image
       dockerfile: Dockerfile
     hostname: jobmanager
     container_name: jobmanager
@@ -38,19 +38,19 @@ services:
         jobmanager.rpc.address: jobmanager
         taskmanager.numberOfTaskSlots: 2
         parallelism.default: 2
-        execution.checkpointing.mode: EXACTLY_ONCE
+        execution.checkpointing.mode: AT_LEAST_ONCE
         state.backend.type: hashmap
       # S3/AWS 配置 - 从 RustFS 服务获取
       AWS_REGION: us-east-1
       AWS_ACCESS_KEY_ID: ${AWS_ACCESS_KEY_ID:-n3xtchen}
       AWS_SECRET_ACCESS_KEY: ${AWS_SECRET_ACCESS_KEY:-n3xtchen}
-      AWS_ENDPOINT_URL: ${AWS_ENDPOINT_URL:-http://localhost:9000}
-      S3_ENDPOINT: ${AWS_ENDPOINT_URL:-http://localhost:9000}
+      AWS_ENDPOINT_URL: ${AWS_ENDPOINT_URL:-http://host.docker.internal:9000}
+      S3_ENDPOINT: ${AWS_ENDPOINT_URL:-http://host.docker.internal:9000}
 
   # Flink TaskManager
   taskmanager:
     build:
-      context: ./flink-iceberg-image
+      context: ./flink-s3-image
       dockerfile: Dockerfile
     hostname: taskmanager
     container_name: taskmanager
@@ -68,14 +68,14 @@ services:
         jobmanager.rpc.address: jobmanager
         taskmanager.numberOfTaskSlots: 2
         parallelism.default: 2
-        execution.checkpointing.mode: EXACTLY_ONCE
+        execution.checkpointing.mode: AT_LEAST_ONCE
         state.backend.type: hashmap
       # S3/AWS 配置 - 从 RustFS 服务获取
       AWS_REGION: us-east-1
       AWS_ACCESS_KEY_ID: ${AWS_ACCESS_KEY_ID:-n3xtchen}
       AWS_SECRET_ACCESS_KEY: ${AWS_SECRET_ACCESS_KEY:-n3xtchen}
-      AWS_ENDPOINT_URL: ${AWS_ENDPOINT_URL:-http://localhost:9000}
-      S3_ENDPOINT: ${AWS_ENDPOINT_URL:-http://localhost:9000}
+      AWS_ENDPOINT_URL: ${AWS_ENDPOINT_URL:-http://host.docker.internal:9000}
+      S3_ENDPOINT: ${AWS_ENDPOINT_URL:-http://host.docker.internal:9000}
 
 networks:
   flink_net:

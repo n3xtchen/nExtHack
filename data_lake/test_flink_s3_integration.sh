@@ -47,7 +47,7 @@ CREATE TABLE test_users_print (
   age INT,
   city STRING
 ) WITH (
-  'connector' = 'filesystem'
+  'connector' = 'print'
 );
 
 INSERT INTO test_users_print VALUES
@@ -79,7 +79,7 @@ CREATE TABLE test_users_s3 (
   city STRING
 ) WITH (
   'connector' = 'filesystem',
-  'path' = 's3://flink-data/users/',
+  'path' = 's3a://flink-data/',
   'format' = 'csv'
 );
 
