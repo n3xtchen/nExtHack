@@ -1,0 +1,138 @@
+#
+# Licensed to the Apache Software Foundation (ASF) under one
+# or more contributor license agreements.  See the NOTICE file
+# distributed with this work for additional information
+# regarding copyright ownership.  The ASF licenses this file
+# to you under the Apache License, Version 2.0 (the
+# "License"); you may not use this file except in compliance
+# with the License.  You may obtain a copy of the License at
+#
+#   http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing,
+# software distributed under the License is distributed on an
+# "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+# KIND, either express or implied.  See the License for the
+# specific language governing permissions and limitations
+# under the License.
+#
+
+# Flink Quickstart with Apache Iceberg
+#
+# Usage:
+#   docker compose -f docker/iceberg-flink-quickstart/docker-compose.yml up -d --build
+#
+# Connect to SQL client:
+#   docker exec -it jobmanager ./bin/sql-client.sh
+services:
+  # Flink JobManager
+  jobmanager:
+    build: ./flink
+    hostname: jobmanager
+    container_name: jobmanager
+    ports:
+      - "8081:8081"
+    depends_on:
+      iceberg-rest:
+        condition: service_healthy
+    networks:
+      flink_net:
+    command: jobmanager
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8081/overview"]
+      start_period: 30s
+      interval: 5s
+      timeout: 3s
+      retries: 5
+    environment:
+      FLINK_PROPERTIES: |
+        jobmanager.rpc.address: jobmanager
+        taskmanager.numberOfTaskSlots: 2
+        parallelism.default: 2
+        s3.path.style.access: true
+        s3.endpoint: ${AWS_ENDPOINT_URL:-http://host.docker.internal:9000}
+        # 如下配置并没有解决 MPU 的 Commit 问题
+        s3.multipart.upload.enabled: false
+        # 或者调大 threshold，让小文件走单次上传
+        s3.multipart.upload.min-part-size: 1gb
+      AWS_REGION: us-east-1
+      AWS_ACCESS_KEY_ID: ${AWS_ACCESS_KEY_ID:-n3xtchen}
+      AWS_SECRET_ACCESS_KEY: ${AWS_SECRET_ACCESS_KEY:-n3xtchen}
+      S3_ENDPOINT: ${AWS_ENDPOINT_URL:-http://host.docker.internal:9000}
+
+
+  # Flink TaskManager
+  taskmanager:
+    build: ./flink
+    hostname: taskmanager
+    depends_on:
+      jobmanager:
+        condition: service_healthy
+    networks:
+      flink_net:
+    command: taskmanager
+    deploy:
+      replicas: 1
+    environment:
+      FLINK_PROPERTIES: |
+        jobmanager.rpc.address: jobmanager
+        taskmanager.numberOfTaskSlots: 2
+        parallelism.default: 2
+        s3.path.style.access: true
+        s3.endpoint: ${AWS_ENDPOINT_URL:-http://host.docker.internal:9000}
+        # 如下配置并没有解决 MPU 的 Commit 问题
+        s3.multipart.upload.enabled: false
+        # 或者调大 threshold，让小文件走单次上传
+        s3.multipart.upload.min-part-size: 1gb
+      AWS_REGION: us-east-1
+      AWS_ACCESS_KEY_ID: ${AWS_ACCESS_KEY_ID:-n3xtchen}
+      AWS_SECRET_ACCESS_KEY: ${AWS_SECRET_ACCESS_KEY:-n3xtchen}
+      S3_ENDPOINT: ${AWS_ENDPOINT_URL:-http://host.docker.internal:9000}
+
+  # Iceberg REST Catalog
+  iceberg-rest:
+    image: apache/iceberg-rest-fixture
+    hostname: iceberg-rest
+    ports:
+      - "8181:8181"
+    depends_on:
+      create-bucket:
+        condition: service_completed_successfully
+    networks:
+      flink_net:
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8181/v1/config"]
+      interval: 5s
+      timeout: 3s
+      retries: 5
+    environment:
+      AWS_REGION: us-east-1
+      CATALOG_WAREHOUSE: s3://warehouse/iceberg/
+      CATALOG_IO__IMPL: org.apache.iceberg.aws.s3.S3FileIO
+      CATALOG_S3_ENDPOINT: ${AWS_ENDPOINT_URL:-http://host.docker.internal:9000}
+      CATALOG_S3_ACCESS__KEY__ID: ${AWS_ACCESS_KEY_ID:-n3xtchen}
+      CATALOG_S3_SECRET__ACCESS__KEY: ${AWS_SECRET_ACCESS_KEY:-n3xtchen}
+      CATALOG_S3_PATH__STYLE__ACCESS: true
+
+  # Create the warehouse bucket
+  create-bucket:
+    image: minio/mc
+    #depends_on:
+    #  rustfs:
+    #    condition: service_healthy
+    networks:
+      flink_net:
+    entrypoint: |
+      /bin/sh -c "
+      until (/usr/bin/mc alias set rustfs $AWS_ENDPOINT_URL $AWS_ACCESS_KEY_ID $AWS_SECRET_ACCESS_KEY) do echo '...waiting...' && sleep 1; done;
+      /usr/bin/mc rm -r --force rustfs/warehouse;
+      /usr/bin/mc mb rustfs/warehouse;
+      /usr/bin/mc anonymous set public rustfs/warehouse;
+      "
+    environment:
+      AWS_ACCESS_KEY_ID: ${AWS_ACCESS_KEY_ID:-n3xtchen}
+      AWS_SECRET_ACCESS_KEY: ${AWS_SECRET_ACCESS_KEY:-n3xtchen}
+      S3_ENDPOINT: ${AWS_ENDPOINT_URL:-http://host.docker.internal:9000}
+
+networks:
+  flink_net:

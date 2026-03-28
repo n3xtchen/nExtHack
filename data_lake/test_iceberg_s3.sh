@@ -18,11 +18,11 @@ echo ""
 echo -e "${BLUE}[0/3] 验证环境配置...${NC}"
 
 echo "检查 S3 Presto 插件..."
-PLUGIN_COUNT=$(docker exec jobmanager ls -1 /opt/flink/plugins/s3-fs-presto/ 2>/dev/null | wc -l)
+PLUGIN_COUNT=$(docker exec jobmanager ls -1 /opt/flink/plugins/s3-fs-hadoop/ 2>/dev/null | wc -l)
 if [ "$PLUGIN_COUNT" -gt 0 ]; then
-    echo -e "${GREEN}✅ S3 Presto 插件已激活${NC}"
+    echo -e "${GREEN}✅ S3 Hadoop 插件已激活${NC}"
 else
-    echo -e "${RED}❌ S3 Presto 插件未激活${NC}"
+    echo -e "${RED}❌ S3 Hadoop 插件未激活${NC}"
 fi
 
 echo "检查 Iceberg 支持..."
@@ -39,8 +39,22 @@ echo ""
 echo -e "${BLUE}[1/3] 创建 Iceberg 表...${NC}"
 
 docker exec -i jobmanager ./bin/sql-client.sh 2>&1 << 'SQL_END' > /tmp/iceberg_output.txt
+CREATE CATALOG iceberg_catalog WITH (
+  'type'                 = 'iceberg',
+  'catalog-impl'         = 'org.apache.iceberg.rest.RESTCatalog',
+  'uri'                  = 'http://iceberg-rest:8181',
+  'warehouse'            = 's3://flink-data/warehouse/‘,
+  'io-impl'              = 'org.apache.iceberg.aws.s3.S3FileIO',
+  's3.endpoint'          = 'http://host.docker.internal:9000',
+  's3.access-key-id'     = ‘n3xtchen’,
+  's3.secret-access-key' = 'n3xtchen',
+  's3.path-style-access' = 'true'
+);
+
+CREATE DATABASE IF NOT EXISTS iceberg_catalog.nyc;
+
 -- 创建 Iceberg 表（使用 S3 作为存储）
-CREATE TABLE IF NOT EXISTS iceberg_users (
+CREATE TABLE IF NOT EXISTS iceberg_catalog.nyc.iceberg_users (
   id INT,
   name STRING,
   age INT,
@@ -49,11 +63,11 @@ CREATE TABLE IF NOT EXISTS iceberg_users (
   'connector' = 'iceberg',
   'warehouse' = 's3://flink-data/iceberg/',
   'uri' = 's3://flink-data/iceberg/',
-  'format' = 'parquet'
+  'format' = 'csv'
 );
 
 -- 插入数据
-INSERT INTO iceberg_users VALUES
+INSERT INTO iceberg_catalog.nyc.iceberg_users VALUES
   (1, 'Alice', 30, 'Beijing'),
   (2, 'Bob', 25, 'Shanghai'),
   (3, 'Charlie', 35, 'Guangzhou'),

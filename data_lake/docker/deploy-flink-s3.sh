@@ -25,8 +25,7 @@ NC='\033[0m' # No Color
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 
 # 配置
-COMPOSE_FILE="${SCRIPT_DIR}/docker-compose-flink-s3.yml"
-DOCKER_IMAGE_DIR="${SCRIPT_DIR}/flink-s3-image"
+COMPOSE_FILE="${SCRIPT_DIR}/docker-compose.yml"
 
 # 函数：打印标题
 print_header() {
@@ -81,7 +80,7 @@ check_compose_file() {
         print_error "docker-compose 配置文件不存在: $COMPOSE_FILE"
         exit 1
     fi
-    print_success "docker-compose 配置文件已找到"
+    print_success "docker-compose 配置文件已找到: $COMPOSE_FILE"
 }
 
 # 函数：启动
@@ -212,7 +211,7 @@ Flink S3 一键启动脚本
 前置要求：
   - Docker 已安装并运行
   - RustFS S3 服务已启动 (./start_rustfs.sh)
-  - docker-compose-flink-s3.yml 配置文件存在
+  - docker-compose.yml 配置文件存在
 
 常用命令：
   查看容器状态：

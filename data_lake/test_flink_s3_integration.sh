@@ -18,19 +18,19 @@ echo ""
 echo -e "${BLUE}[0/4] 验证 Hadoop 和 S3 配置...${NC}"
 
 echo "检查 S3 Presto 插件..."
-PLUGIN_COUNT=$(docker exec jobmanager ls -1 /opt/flink/plugins/s3-fs-presto/ 2>/dev/null | wc -l)
+PLUGIN_COUNT=$(docker exec jobmanager ls -1 /opt/flink/plugins/s3-fs-hadoop/ 2>/dev/null | wc -l)
 if [ "$PLUGIN_COUNT" -gt 0 ]; then
-    echo -e "${GREEN}✅ S3 Presto 插件已激活${NC}"
+    echo -e "${GREEN}✅ S3 Hadoop 插件已激活${NC}"
 else
-    echo -e "${RED}❌ S3 Presto 插件未激活${NC}"
+    echo -e "${RED}❌ S3 Hadoop 插件未激活${NC}"
 fi
 
-echo "检查 Presto 依赖..."
+echo "检查 Hadoop 依赖..."
 PRESTO_LIBS=$(docker exec jobmanager ls -1 /opt/flink/lib/ 2>/dev/null | grep -iE "(presto|okhttp)" | wc -l)
 if [ "$PRESTO_LIBS" -gt 0 ]; then
-    echo -e "${GREEN}✅ Presto 依赖库已安装${NC}"
+    echo -e "${GREEN}✅ Hadoop 依赖库已安装${NC}"
 else
-    echo -e "${GREEN}✅ Presto 实现无需外部依赖${NC}"
+    echo -e "${GREEN}✅ Hadoop 实现无需外部依赖${NC}"
 fi
 
 echo "检查 flink-conf.yaml..."
