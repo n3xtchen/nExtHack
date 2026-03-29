@@ -36,7 +36,7 @@ services:
       iceberg-rest:
         condition: service_healthy
     networks:
-      flink_net:
+      shared_net:
     command: jobmanager
     healthcheck:
       test: ["CMD", "curl", "-f", "http://localhost:8081/overview"]
@@ -69,7 +69,7 @@ services:
       jobmanager:
         condition: service_healthy
     networks:
-      flink_net:
+      shared_net:
     command: taskmanager
     deploy:
       replicas: 1
@@ -99,7 +99,7 @@ services:
       create-bucket:
         condition: service_completed_successfully
     networks:
-      flink_net:
+      shared_net:
     healthcheck:
       test: ["CMD", "curl", "-f", "http://localhost:8181/v1/config"]
       interval: 5s
@@ -121,7 +121,7 @@ services:
     #  rustfs:
     #    condition: service_healthy
     networks:
-      flink_net:
+      shared_net:
     entrypoint: |
       /bin/sh -c "
       until (/usr/bin/mc alias set rustfs $AWS_ENDPOINT_URL $AWS_ACCESS_KEY_ID $AWS_SECRET_ACCESS_KEY) do echo '...waiting...' && sleep 1; done;
@@ -135,4 +135,6 @@ services:
       S3_ENDPOINT: ${AWS_ENDPOINT_URL:-http://host.docker.internal:9000}
 
 networks:
-  flink_net:
+  shared_net:
+    external: true
+    name: n3xt_net

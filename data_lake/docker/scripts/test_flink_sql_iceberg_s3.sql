@@ -5,7 +5,7 @@ CREATE CATALOG iceberg_catalog WITH (
   'uri'                  = 'http://iceberg-rest:8181',
   'warehouse'            = 's3://warehouse/iceberg/',
   'io-impl'              = 'org.apache.iceberg.aws.s3.S3FileIO',
-  's3.endpoint'          = 'http://host.docker.internal:9000',
+  's3.endpoint'          = 'http://rustfs:9000',
   's3.access-key-id'     = 'n3xtchen',
   's3.secret-access-key' = 'n3xtchen',
   's3.path-style-access' = 'true'
