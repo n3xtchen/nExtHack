@@ -50,6 +50,8 @@ services:
       - logs:/app/logs
     networks:
       shared_net:
+        aliases:
+          - nextfs
     restart: unless-stopped
     healthcheck:
       test:

@@ -1,0 +1,30 @@
+
+
+services:
+
+  # MinIO for S3-compatible object storage
+  minio:
+    image: minio/minio
+    hostname: minio
+    ports:
+      - "19000:9000" # S3 API port
+      - "19001:9001" # Console port
+    environment:
+      MINIO_ROOT_USER: ${AWS_ACCESS_KEY_ID:-n3xtchen}
+      MINIO_ROOT_PASSWORD: ${AWS_SECRET_ACCESS_KEY:-n3xtchen}
+      MINIO_DOMAIN: minio
+    networks:
+      shared_net:
+        aliases:
+          - warehouse.minio
+    command: server /data --console-address ":9001"
+    healthcheck:
+      test: ["CMD", "mc", "ready", "local"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+networks:
+  shared_net:
+    external: true
+    name: n3xt_net
