@@ -124,10 +124,10 @@ services:
       shared_net:
     entrypoint: |
       /bin/sh -c "
-      until (/usr/bin/mc alias set rustfs $AWS_ENDPOINT_URL $AWS_ACCESS_KEY_ID $AWS_SECRET_ACCESS_KEY) do echo '...waiting...' && sleep 1; done;
-      /usr/bin/mc rm -r --force rustfs/warehouse;
-      /usr/bin/mc mb rustfs/warehouse;
-      /usr/bin/mc anonymous set public rustfs/warehouse;
+      until (/usr/bin/mc alias set nextfs ${AWS_ENDPOINT_URL:-http://host.docker.internal:9000} ${AWS_ACCESS_KEY_ID:-n3xtchen} ${AWS_SECRET_ACCESS_KEY:-n3xtchen}) do echo '...waiting...' && sleep 1; done;
+      /usr/bin/mc rm -r --force nextfs/warehouse;
+      /usr/bin/mc mb nextfs/warehouse;
+      /usr/bin/mc anonymous set public nextfs/warehouse;
       "
     environment:
       AWS_ACCESS_KEY_ID: ${AWS_ACCESS_KEY_ID:-n3xtchen}
