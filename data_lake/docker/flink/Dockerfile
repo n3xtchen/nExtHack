@@ -29,6 +29,9 @@ ARG ICEBERG_FLINK_RUNTIME_VERSION=2.0
 ARG ICEBERG_VERSION=1.10.1
 ARG HADOOP_VERSION=3.4.2
 
+ARG HUDI_FLINK_RUNTIME_VERSION=2.0
+ARG HUDI_VERSION=1.1.1
+
 # Switch to flink user for installation
 USER flink
 
@@ -41,16 +44,33 @@ RUN mkdir -p $FLINK_HOME/plugins/s3-fs-hadoop && \
 
 # ICEBerg 支持
 
-# Install Iceberg Flink runtime and AWS bundle JARs
+## Install Iceberg Flink runtime and AWS bundle JARs
 RUN echo "-> Install JARs: Dependencies for Iceberg" && \
     mkdir -p ./lib/iceberg && pushd $_ && \
     curl -fO https://repo.maven.apache.org/maven2/org/apache/iceberg/iceberg-flink-runtime-${ICEBERG_FLINK_RUNTIME_VERSION}/${ICEBERG_VERSION}/iceberg-flink-runtime-${ICEBERG_FLINK_RUNTIME_VERSION}-${ICEBERG_VERSION}.jar && \
     curl -fO https://repo.maven.apache.org/maven2/org/apache/iceberg/iceberg-aws-bundle/${ICEBERG_VERSION}/iceberg-aws-bundle-${ICEBERG_VERSION}.jar && \
     popd
 
-# Install Hadoop client JARs (API + shaded runtime bundle)
+## Install Hadoop client JARs (API + shaded runtime bundle)
 RUN echo "-> Install JARs: Hadoop" && \
     mkdir -p ./lib/hadoop && pushd $_ && \
     curl -fO https://repo.maven.apache.org/maven2/org/apache/hadoop/hadoop-client-api/${HADOOP_VERSION}/hadoop-client-api-${HADOOP_VERSION}.jar && \
     curl -fO https://repo.maven.apache.org/maven2/org/apache/hadoop/hadoop-client-runtime/${HADOOP_VERSION}/hadoop-client-runtime-${HADOOP_VERSION}.jar && \
     popd
+
+# Hudi 支持
+
+RUN echo "-> Install JARs: Dependencies for Hudi" && \
+    mkdir -p ./lib && pushd $_ && \
+    curl -fO https://repo1.maven.org/maven2/org/apache/hudi/hudi-flink${HUDI_FLINK_RUNTIME_VERSION}-bundle/${HUDI_VERSION}/hudi-flink${HUDI_FLINK_RUNTIME_VERSION}-bundle-${HUDI_VERSION}.jar && \
+    popd
+
+RUN echo "-> Install JARs: Hadoop" && \
+    mkdir -p ./lib/hadoop && pushd $_ && \
+		curl -fO https://repo.maven.apache.org/maven2/org/apache/hadoop/hadoop-aws/${HADOOP_VERSION}/hadoop-aws-${HADOOP_VERSION}.jar && \
+		curl -fO https://repo1.maven.org/maven2/software/amazon/awssdk/bundle/2.42.28/bundle-2.42.28.jar && \
+		popd
+
+USER root
+RUN mkdir -p /opt/hadoop/etc/hadoop && chown -R flink:flink /opt/hadoop
+
